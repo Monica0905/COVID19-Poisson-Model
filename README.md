@@ -4,8 +4,5 @@ This project is to study the factors of the spread of n-COVID 2019 virus in the 
 
 ## Getting Started
 
+For a complete list of data sources, please visit the [Data Source Wiki](https://github.com/Monica0905/COVID2019-GLM-Model/wiki/Data-Source-Wiki) page.
 
-
-## Resources
-
-Please visit the [Wiki](https://github.com/Monica0905/COVID2019-GLM-Model/wiki) for latest information and resources.
