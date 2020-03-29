@@ -14,11 +14,11 @@ library(here)
 
 # ------------------------------------------------------------------------------
 # Data Name: covid_confirmed_usafacts.csv
-# Path: data/raw/usa-facts/03-27-2020/
+# Path: data/raw/case data/usa-facts/03-27-2020/
 
 # Load -----
 here::here()
-dat <- fread("data/raw/usa-facts/03-27-2020/covid_confirmed_usafacts_03272020.csv")
+dat <- fread("data/raw/case data/usa-facts/03-27-2020/covid_confirmed_usafacts_03272020.csv")
 
 # Formatted in a cumulative trend 
 head(dat, 5)
