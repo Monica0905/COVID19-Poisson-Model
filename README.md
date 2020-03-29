@@ -6,3 +6,6 @@ This project is to study the factors of the spread of n-COVID 2019 virus in the 
 
 For a complete list of data sources, please visit the [Data Source Wiki](https://github.com/Monica0905/COVID2019-GLM-Model/wiki/Data-Source-Wiki) page.
 
+## Coding Style
+
+Please refer to [the tidyverse style guide](https://style.tidyverse.org/) recommended by [Hadley Wickham](http://hadley.nz/).
