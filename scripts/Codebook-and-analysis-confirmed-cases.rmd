@@ -136,7 +136,17 @@ glimpse_dat
 
 ```{r viz-1, warning=FALSE}
 ggplot(total_confirmed_daily, aes(x = date, y = total_confirmed)) + 
-  geom_point()
+  geom_point() + 
+  theme_light() + 
+  theme(
+    panel.grid.minor = element_blank(),
+  ) +
+  ggtitle(
+    label = "Total Confirmed Cases, Nation-wide, Daily",
+    subtitle = "COVID-19 GLM Model Project"
+  ) +
+  xlab("Date") +
+  ylab("Total Confirmed Cases")
 ```
 
 
