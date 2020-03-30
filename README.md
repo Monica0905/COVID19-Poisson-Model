@@ -4,8 +4,24 @@ This project is to study the factors of the spread of n-COVID 2019 virus in the 
 
 ## Getting Started
 
+### Data Source
+
 For a complete list of data sources, please visit the [Data Source Wiki](https://github.com/Monica0905/COVID2019-GLM-Model/wiki/Data-Source-Wiki) page.
 
-## Coding Style
+### Access Data
+
+Data are stored on Google Drive. Please use [**THIS LINK**](https://drive.google.com/drive/folders/1xZDBQJFxCApj7UhAkjtrmrHnOwtgRvye?usp=sharing) to access.
+
+For new data files, please upload directly onto the sharing folder. After uploading, please create a **README** file using either [Text File](https://en.wikipedia.org/wiki/Text_file) or [Markdown](https://en.wikipedia.org/wiki/Markdown) formats. In the README document, please add a **simple description** of the data included in the folder, along with some of (or the entire of) the following contents:
+
+- Variable lists. This should be served as a quick codebook for reference. [Best practice](https://www.census.gov/programs-surveys/nsch/technical-documentation/codebooks.html)
+
+- Basic descriptive analysis.
+
+- Features or key points.
+
+- Caveats.
+
+### Coding Style
 
 Please refer to [the tidyverse style guide](https://style.tidyverse.org/) recommended by [Hadley Wickham](http://hadley.nz/).
