@@ -154,7 +154,7 @@ daily_new_cases <- cbind(
 # Save to data folder
 write.csv(
   daily_new_cases, 
-  file = "../data/raw/case data/usa-facts/03-29-2020/daily_new_cases_03292020.csv"
+  file = "../data/processed/case data/usa-facts/03-29-2020/daily_new_cases_03292020.csv"
 )
 
 # To display a summary table
