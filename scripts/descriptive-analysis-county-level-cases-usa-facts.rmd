@@ -1,0 +1,674 @@
+---
+title: "A Descriptive Analysis of County-level Confirmed COVID-19 Cases in U.S."
+subtitle: "The COVID-19 Possion Model Project"
+author: "NYU A3SR"
+output: 
+  html_document:
+    df_print: paged
+    theme: paper
+    highlight: kate
+    toc: true
+    toc_float: 
+      collapsed: false
+      smooth_scroll: false
+    toc_depth: 3
+    number_sections: false
+    code_folding: hide
+---
+
+```{r setup, message=FALSE, warning=FALSE}
+if(!requireNamespace("dplyr"))
+  install.packages("dplyr", repos = "https://cloud.r-project.org")
+if(!requireNamespace("data.table"))
+  install.packages("data.table", repos = "https://cloud.r-project.org")
+if(!requireNamespace("here"))
+  install.packages("here", repos = "https://cloud.r-project.org")
+if(!requireNamespace("ggplot2"))
+  install.packages("ggplot2", repos = "https://cloud.r-project.org")
+if(!requireNamespace("cowplot"))
+  install.packages("cowplot", repos = "https://cloud.r-project.org")
+require(data.table)
+require(dplyr)
+library(here)
+require(ggplot2)
+require(cowplot)
+```
+
+## Introduction
+
+This descriptive analysis illustrates how county-level confirmed [COVID-19](https://www.who.int/emergencies/diseases/novel-coronavirus-2019) cases were developed in the United States, starting from January, 2020. The data we used in this study come from [USA FACTS](https://usafacts.org/visualizations/coronavirus-covid-19-spread-map/). The data files are updated on a daily basis and are stored in time stamp formats. We applied multiple statistical tools to analyze and visualize the outbreak development.
+
+## Creating Data Files
+
+Through data processing, we created two levels of data files for the analysis: 
+
+- National Level: 
+  - Daily nation-wide total confirmed cases
+
+- County Level: 
+  - Daily new cases by county and state
+  - Cumulative cases by county and state
+  - Most recent confirmed cases by county (as of 03-29-2020)
+
+```{r loading-data-hide, include=FALSE}
+# Data Name: covid_confirmed_usafacts_03292020.csv
+# Path: data/raw/case data/usa-facts/03-29-2020/
+
+# Load -------------------------------------------------------------------------
+here::here()
+dat <- fread(
+  "../data/raw/case data/usa-facts/03-29-2020/covid_confirmed_usafacts_03292020.csv", 
+)
+```
+
+```{r cleaning, results=FALSE}
+# Unify variable naming using lower_snack_case
+confirmed_cases <- as_tibble(dat) %>%
+  rename(
+    county_fips = countyFIPS, 
+    county_name = "County Name", 
+    state_name = State, 
+    state_fips = stateFIPS
+  ) %>%
+  subset(
+    select = c(1, 4, 2, 3, 5:72)
+  )
+
+# Check if there are missing values
+table(is.na(confirmed_cases))
+```
+
+## Descriptive Analysis
+
+### Variables and Values
+
+Below is a table listing all primary and supplementary variables in the data file. Primary data are columned by dates.
+
+```{r variables}
+# Create a table to describe variables
+variable_name <- append(
+  x = colnames(confirmed_cases)[1:4],
+  values = "date"
+)
+variable_description <- c(
+  "FIPS county code",
+  "FIPS state code",
+  "County name",
+  "State name",
+  "Date period 01/22/2020 to 03/29/2020, 68 days, column 5 to 72"
+)
+
+# To display a summary table
+variable_display <- data.frame(
+  variable_name,
+  variable_description
+)
+variable_display
+
+# Review the distribution of confirmed cases as of 03-29-2020
+county_level_most_cases <- max(confirmed_cases$"3/29/20")
+summary(confirmed_cases[, "3/29/20"])
+# Queens County, NY has the highest total as of 03-29-2020,
+# with 10,737 confirmed cases.
+county_with_most_cases <-
+  confirmed_cases$county_name[confirmed_cases$"3/29/20" == county_level_most_cases]
+state_with_most_cases <-
+  confirmed_cases$state_name[confirmed_cases$"3/29/20" == county_level_most_cases]
+# 1,325 counties have zero confirmed case as of 03-29-2020
+N <- nrow(confirmed_cases)
+n_statewide_unallocated <-
+  table(confirmed_cases$county_name == "Statewide Unallocated")["TRUE"]
+n_county <- N - n_statewide_unallocated
+county_with_zero_cases <- table(confirmed_cases$"3/29/20" == 0)["TRUE"]
+county_with_five_more <- table(confirmed_cases$"3/29/20" >=5)["TRUE"]
+county_with_ten_more <- table(confirmed_cases$"3/29/20" >= 10)["TRUE"]
+```
+
+### Data Structure
+
+Starting from 01/22/2020, county-level confirmed cases were reported daily. Each value in date variables is cumulative. For example, the value of confirmed cases in Queens, NY on Mar. 29, 2020 is calculated by adding cumulative confirmed cases on Mar. 28, 2020 with new cases confirmed on Mar. 29. Therefore, to get daily new cases, we can simply subtract the value on a particular day with the value in the previous day. 
+
+#### Daily New Cases
+
+Below is a table showing 10 counties with highest total confirmed cases, along with number of daily new cases from 01/22/2020 to 03/29/2020 (68 days). 
+
+A complete `csv` data file has been exported as *daily_new_cases_03292020.csv*.
+
+```{r daily-new}
+primary_data <- confirmed_cases[, -(1:4)]
+supplementary_data <- confirmed_cases[, 1:4]
+county_daily_new_temp <- primary_data
+primary_one_last_day <- cbind("initial" = 0, primary_data[, -ncol(primary_data)])
+for (i in 1:N) {
+  county_daily_new_temp[i, ] <- primary_data[i, ] - primary_one_last_day[i, ]
+}
+most_recent_total <- primary_data[, ncol(primary_data)]
+colnames(most_recent_total) <- "current_total"
+daily_new_cases <- cbind(
+  supplementary_data, 
+  most_recent_total,
+  county_daily_new_temp
+)
+
+# Save to data folder
+write.csv(
+  daily_new_cases, 
+  file = "../data/raw/case data/usa-facts/03-29-2020/daily_new_cases_03292020.csv"
+)
+
+# To display a summary table
+daily_new_cases_display <- daily_new_cases[order(-daily_new_cases$current_total), ]
+daily_new_cases_display <- subset(
+  daily_new_cases_display, 
+  subset = county_fips != 0
+)
+head(daily_new_cases_display, 10)
+```
+
+#### Cumulative Cases (Raw Data)
+
+Here is a table showing the first 10 rows of the original data table with cumulative confirmed cases. 
+
+```{r cumulative}
+cumulative_cases <- confirmed_cases
+
+# To display a summary table
+head(cumulative_cases, 10)
+```
+
+#### Daily Nation-wide Total
+
+Here is a table showing nation-wide daily total confirmed cases of the most recent 10 days as of 03/29/2020.
+
+```{r nation-wide-total}
+# Create a table showing daily total confirmed cases, nation-wide
+date <- as.Date(
+  paste(
+    "0", 
+    colnames(primary_data), 
+    sep = ""
+  ), 
+  format = "%m/%d/%y"
+)
+nation_wide_total <- lapply(primary_data, FUN = sum)
+nation_wide_total <- t(as.matrix(as.data.frame(nation_wide_total)))
+nation_wide_total <- data.frame(
+  date = date, 
+  total_confirmed = nation_wide_total
+)
+row.names(nation_wide_total) <- NULL
+
+# Save to data folder
+write.csv(
+  nation_wide_total, 
+  file = "../data/raw/case data/usa-facts/03-29-2020/nation_wide_total_03292020.csv"
+)
+
+# To display a summary table
+tail(nation_wide_total, 10)
+```
+
+### Visualization
+
+#### National Level
+
+Below is a scatter plot showing the increase of nation-wide confirmed cases with a log scaled (`log10`) reference line. 
+
+```{r nation-wide-viz, warning=FALSE, message=FALSE}
+# Change the scale to thousands
+# Start when there were more than 100 cases
+nation_wide_total_over_100 <- 
+  table(nation_wide_total$total_confirmed >= 100)["TRUE"]
+nation_wide_total_viz <- nation_wide_total %>%
+  mutate(
+    total_confirmed_in_thousand = round(total_confirmed / 1000, 
+                                        digits = 2)
+  ) %>%
+  top_n(nation_wide_total_over_100)
+# Create a scatter plot showing the trend of case increases in US
+nation_wide_total_plt <- ggplot(nation_wide_total_viz)
+p1 <- nation_wide_total_plt + 
+  geom_point(
+    aes(
+      x = date, 
+      y = total_confirmed_in_thousand
+    )
+  ) + 
+  theme_minimal() + 
+  theme(
+    panel.grid.minor = element_blank(),
+  ) +
+  ggtitle(
+    label = "Total Confirmed Cases, Nation-wide, with Log Scale",
+    subtitle = "COVID-19 Possion Model Project"
+  ) +
+  xlab("") +
+  ylab("Total Confirmed Cases \n in thousands")
+
+# Log transformation
+p2 <- nation_wide_total_plt + 
+  geom_line(
+    aes(
+      x = date,
+      y = total_confirmed
+    ), 
+    size = 2, 
+    col = "grey", 
+    alpha = .5
+  ) + 
+  scale_y_continuous(trans = "log10") + 
+  theme_void()
+
+aligned_plt <- align_plots(
+  p1, p2, 
+  align = "hv"
+)
+ggdraw(aligned_plt[[1]]) + 
+  draw_plot(aligned_plt[[2]])
+```
+
+#### County Level
+
+##### Queens, NY
+
+```{r county-viz-1, warning=FALSE, message=FALSE}
+### Need to clean up
+daily_new_cases_plt_temp <- 
+  as.data.frame(t(as.matrix(daily_new_cases_display[1:10, ])))
+daily_new_cases_plt <- daily_new_cases_plt_temp[-(1:5), ]
+daily_new_cases_plt_info <- daily_new_cases_plt_temp[1:5, ]
+colnames(daily_new_cases_plt) <- paste("N", 1:10, sep = "") # N1 to N10
+daily_new_cases_plt <- tibble::rownames_to_column(daily_new_cases_plt, "date")
+daily_new_cases_plt$date <- as.Date(
+  daily_new_cases_plt$date, 
+  format = "%m/%d/%y"
+)
+index <- sapply(daily_new_cases_plt, is.factor)
+daily_new_cases_plt[index] <- lapply(daily_new_cases_plt[index], function(x) as.numeric(as.character(x)))
+
+# Create a plot showing daily new cases in 
+# Queens County, NY
+p0 <- ggplot(daily_new_cases_plt, aes(x = date, y = N1))
+p1 <- p0 + 
+  geom_line(
+    size = 1,
+  ) + 
+  scale_x_date(date_labels = "%m/%d", date_breaks = "1 week") + 
+  theme_minimal() + 
+  theme(
+    panel.grid.minor = element_blank(),
+  ) +
+  ggtitle(
+    label = "Daily New Cases in Queens County, NY, with Log Scale",
+    subtitle = "COVID-19 Possion Model Project"
+  ) +
+  xlab("") +
+  ylab("Number of New Cases")
+
+p2 <- p0 + 
+  geom_line(
+    size = 1,
+    col = "grey", 
+    alpha = .7
+  ) + 
+  scale_y_continuous(trans = "log10") + 
+  theme_void()
+
+aligned_plt <- align_plots(
+  p1, p2, 
+  align = "hv"
+)
+ggdraw(aligned_plt[[1]]) + 
+  draw_plot(aligned_plt[[2]])
+```
+
+##### Kings, NY
+
+```{r county-viz-2, warning=FALSE, message=FALSE}
+# Create a plot showing daily new cases in 
+# Kings County, NY
+p0 <- ggplot(daily_new_cases_plt, aes(x = date, y = N2))
+p1 <- p0 + 
+  geom_line(
+    size = 1,
+  ) + 
+  scale_x_date(date_labels = "%m/%d", date_breaks = "1 week") + 
+  theme_minimal() + 
+  theme(
+    panel.grid.minor = element_blank(),
+  ) +
+  ggtitle(
+    label = "Daily New Cases in Kings County, NY, with Log Scale",
+    subtitle = "COVID-19 Possion Model Project"
+  ) +
+  xlab("") +
+  ylab("Number of New Cases")
+
+p2 <- p0 + 
+  geom_line(
+    size = 1,
+    col = "grey",
+    alpha = .7
+  ) + 
+  scale_y_continuous(trans = "log10") + 
+  theme_void()
+
+aligned_plt <- align_plots(
+  p1, p2, 
+  align = "hv"
+)
+ggdraw(aligned_plt[[1]]) + 
+  draw_plot(aligned_plt[[2]])
+```
+
+##### Westchester County, NY
+
+```{r county-viz-3, warning=FALSE, message=FALSE}
+# Create a plot showing daily new cases in 
+# Westchester County, NY
+p0 <- ggplot(daily_new_cases_plt, aes(x = date, y = N3))
+p1 <- p0 + 
+  geom_line(
+    size = 1,
+  ) + 
+  scale_x_date(date_labels = "%m/%d", date_breaks = "1 week") + 
+  theme_minimal() + 
+  theme(
+    panel.grid.minor = element_blank(),
+  ) +
+  ggtitle(
+    label = "Daily New Cases in Westchester County, NY, with Log Scale",
+    subtitle = "COVID-19 Possion Model Project"
+  ) +
+  xlab("") +
+  ylab("Number of New Cases")
+
+p2 <- p0 + 
+  geom_line(
+    size = 1,
+    col = "grey", 
+    alpha = .7
+  ) + 
+  scale_y_continuous(trans = "log10") + 
+  theme_void()
+
+aligned_plt <- align_plots(
+  p1, p2, 
+  align = "hv"
+)
+ggdraw(aligned_plt[[1]]) + 
+  draw_plot(aligned_plt[[2]])
+```
+
+##### Nassau County, NY
+
+```{r county-viz-4, warning=FALSE, message=FALSE}
+# Create a plot showing daily new cases in 
+# Nassau County, NY
+p0 <- ggplot(daily_new_cases_plt, aes(x = date, y = N4))
+p1 <- p0 + 
+  geom_line(
+    size = 1,
+  ) + 
+  scale_x_date(date_labels = "%m/%d", date_breaks = "1 week") + 
+  theme_minimal() + 
+  theme(
+    panel.grid.minor = element_blank(),
+  ) +
+  ggtitle(
+    label = "Daily New Cases in Nassau County, NY, with Log Scale",
+    subtitle = "COVID-19 Possion Model Project"
+  ) +
+  xlab("") +
+  ylab("Number of New Cases")
+
+p2 <- p0 + 
+  geom_line(
+    size = 1,
+    col = "grey", 
+    alpha = .7
+  ) + 
+  scale_y_continuous(trans = "log10") + 
+  theme_void()
+
+aligned_plt <- align_plots(
+  p1, p2, 
+  align = "hv"
+)
+ggdraw(aligned_plt[[1]]) + 
+  draw_plot(aligned_plt[[2]])
+```
+
+##### Bronx County, NY
+
+```{r county-viz-5, warning=FALSE, message=FALSE}
+# Create a plot showing daily new cases in 
+# Bronx County, NY
+p0 <- ggplot(daily_new_cases_plt, aes(x = date, y = N5))
+p1 <- p0 + 
+  geom_line(
+    size = 1,
+  ) + 
+  scale_x_date(date_labels = "%m/%d", date_breaks = "1 week") + 
+  theme_minimal() + 
+  theme(
+    panel.grid.minor = element_blank(),
+  ) +
+  ggtitle(
+    label = "Daily New Cases in Bronx County, NY, with Log Scale",
+    subtitle = "COVID-19 Possion Model Project"
+  ) +
+  xlab("") +
+  ylab("Number of New Cases")
+
+p2 <- p0 + 
+  geom_line(
+    size = 1,
+    col = "grey", 
+    alpha = .7
+  ) + 
+  scale_y_continuous(trans = "log10") + 
+  theme_void()
+
+aligned_plt <- align_plots(
+  p1, p2, 
+  align = "hv"
+)
+ggdraw(aligned_plt[[1]]) + 
+  draw_plot(aligned_plt[[2]])
+```
+
+##### Manhattan, NY
+
+```{r county-viz-6, warning=FALSE, message=FALSE}
+# Create a plot showing daily new cases in 
+# Manhattan, NY
+p0 <- ggplot(daily_new_cases_plt, aes(x = date, y = N6))
+p1 <- p0 + 
+  geom_line(
+    size = 1,
+  ) + 
+  scale_x_date(date_labels = "%m/%d", date_breaks = "1 week") + 
+  theme_minimal() + 
+  theme(
+    panel.grid.minor = element_blank(),
+  ) +
+  ggtitle(
+    label = "Daily New Cases in Manhattan, NY, with Log Scale",
+    subtitle = "COVID-19 Possion Model Project"
+  ) +
+  xlab("") +
+  ylab("Number of New Cases")
+
+p2 <- p0 + 
+  geom_line(
+    size = 1,
+    col = "grey", 
+    alpha = .7
+  ) + 
+  scale_y_continuous(trans = "log10") + 
+  theme_void()
+
+aligned_plt <- align_plots(
+  p1, p2, 
+  align = "hv"
+)
+ggdraw(aligned_plt[[1]]) + 
+  draw_plot(aligned_plt[[2]])
+```
+
+##### Suffolk County, NY
+
+```{r county-viz-7, warning=FALSE, message=FALSE}
+# Create a plot showing daily new cases in 
+# Suffolk County, NY
+p0 <- ggplot(daily_new_cases_plt, aes(x = date, y = N7))
+p1 <- p0 + 
+  geom_line(
+    size = 1,
+  ) + 
+  scale_x_date(date_labels = "%m/%d", date_breaks = "1 week") + 
+  theme_minimal() + 
+  theme(
+    panel.grid.minor = element_blank(),
+  ) +
+  ggtitle(
+    label = "Daily New Cases in Suffolk County, NY, with Log Scale",
+    subtitle = "COVID-19 Possion Model Project"
+  ) +
+  xlab("") +
+  ylab("Number of New Cases")
+
+p2 <- p0 + 
+  geom_line(
+    size = 1,
+    col = "grey", 
+    alpha = .7
+  ) + 
+  scale_y_continuous(trans = "log10") + 
+  theme_void()
+
+aligned_plt <- align_plots(
+  p1, p2, 
+  align = "hv"
+)
+ggdraw(aligned_plt[[1]]) + 
+  draw_plot(aligned_plt[[2]])
+```
+
+##### Cook County, IL
+
+```{r county-viz-8, warning=FALSE, message=FALSE}
+# Create a plot showing daily new cases in 
+# Cook County, IL
+p0 <- ggplot(daily_new_cases_plt, aes(x = date, y = N8))
+p1 <- p0 + 
+  geom_line(
+    size = 1,
+  ) + 
+  scale_x_date(date_labels = "%m/%d", date_breaks = "1 week") + 
+  theme_minimal() + 
+  theme(
+    panel.grid.minor = element_blank(),
+  ) +
+  ggtitle(
+    label = "Daily New Cases in Cook County, IL, with Log Scale",
+    subtitle = "COVID-19 Possion Model Project"
+  ) +
+  xlab("") +
+  ylab("Number of New Cases")
+
+p2 <- p0 + 
+  geom_line(
+    size = 1,
+    col = "grey", 
+    alpha = .7
+  ) + 
+  scale_y_continuous(trans = "log10") + 
+  theme_void()
+
+aligned_plt <- align_plots(
+  p1, p2, 
+  align = "hv"
+)
+ggdraw(aligned_plt[[1]]) + 
+  draw_plot(aligned_plt[[2]])
+```
+
+##### Wayne County, MI
+
+```{r county-viz-9, warning=FALSE, message=FALSE}
+# Create a plot showing daily new cases in 
+# Wayne County, MI
+p0 <- ggplot(daily_new_cases_plt, aes(x = date, y = N9))
+p1 <- p0 + 
+  geom_line(
+    size = 1,
+  ) + 
+  scale_x_date(date_labels = "%m/%d", date_breaks = "1 week") + 
+  theme_minimal() + 
+  theme(
+    panel.grid.minor = element_blank(),
+  ) +
+  ggtitle(
+    label = "Daily New Cases in Wayne County, MI, with Log Scale",
+    subtitle = "COVID-19 Possion Model Project"
+  ) +
+  xlab("") +
+  ylab("Number of New Cases")
+
+p2 <- p0 + 
+  geom_line(
+    size = 1,
+    col = "grey", 
+    alpha = .7
+  ) + 
+  scale_y_continuous(trans = "log10") + 
+  theme_void()
+
+aligned_plt <- align_plots(
+  p1, p2, 
+  align = "hv"
+)
+ggdraw(aligned_plt[[1]]) + 
+  draw_plot(aligned_plt[[2]])
+```
+
+##### Rockland County, NY
+
+```{r county-viz-10, warning=FALSE, message=FALSE}
+# Create a plot showing daily new cases in 
+# Rockland County, NY
+p0 <- ggplot(daily_new_cases_plt, aes(x = date, y = N10))
+p1 <- p0 + 
+  geom_line(
+    size = 1,
+  ) + 
+  scale_x_date(date_labels = "%m/%d", date_breaks = "1 week") + 
+  theme_minimal() + 
+  theme(
+    panel.grid.minor = element_blank(),
+  ) +
+  ggtitle(
+    label = "Daily New Cases in Rockland County, NY, with Log Scale",
+    subtitle = "COVID-19 Possion Model Project"
+  ) +
+  xlab("") +
+  ylab("Number of New Cases")
+
+p2 <- p0 + 
+  geom_line(
+    size = 1,
+    col = "grey", 
+    alpha = .7
+  ) + 
+  scale_y_continuous(trans = "log10") + 
+  theme_void()
+
+aligned_plt <- align_plots(
+  p1, p2, 
+  align = "hv"
+)
+ggdraw(aligned_plt[[1]]) + 
+  draw_plot(aligned_plt[[2]])
+```
