@@ -3,6 +3,7 @@ title: "A Descriptive Analysis of County-level Confirmed COVID-19 Cases in U.S."
 subtitle: "The COVID-19 Possion Model Project"
 author: "NYU A3SR"
 output: 
+  word_document: default
   html_document:
     df_print: paged
     theme: paper
