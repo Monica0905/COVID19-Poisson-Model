@@ -12,15 +12,19 @@ if(!requireNamespace("here"))
   install.packages("here", repos = "https://cloud.r-project.org")
 if(!requireNamespace("ggplot2"))
   install.packages("ggplot2", repos = "https://cloud.r-project.org")
+if(!requireNamespace("readr"))
+  install.packages("readr", repos = "https://cloud.r-project.org")
+if(!requireNamespace("reshape2"))
+  install.packages("reshape2", repos = "https://cloud.r-project.org")
+if(!requireNamespace("reshape2"))
+  install.packages("ggpubr", repos = "https://cloud.r-project.org")
 
 require(dplyr)
-library(here)
+require(here)
 require(ggplot2)
 require(readr)
 require(reshape2)
-require(ggpubr) 
-
-
+require(ggpubr)
 ```
 
 
