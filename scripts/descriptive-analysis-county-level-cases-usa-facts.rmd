@@ -202,7 +202,7 @@ row.names(nation_wide_total) <- NULL
 # Save to data folder
 write.csv(
   nation_wide_total, 
-  file = "../data/raw/case data/usa-facts/03-29-2020/nation_wide_total_03292020.csv"
+  file = "../data/processed/case data/usa-facts/03-29-2020/nation_wide_total_03292020.csv"
 )
 
 # To display a summary table
