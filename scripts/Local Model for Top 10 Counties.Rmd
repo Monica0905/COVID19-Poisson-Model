@@ -1,5 +1,6 @@
 ---
 title: "Local Model for Top 10 Counties"
+subtitle: "with County Local Predictive Plots"
 author: "NYU A3SR"
 date: "3/31/2020"
 output: pdf_document
@@ -16,7 +17,7 @@ if(!requireNamespace("readr"))
   install.packages("readr", repos = "https://cloud.r-project.org")
 if(!requireNamespace("reshape2"))
   install.packages("reshape2", repos = "https://cloud.r-project.org")
-if(!requireNamespace("reshape2"))
+if(!requireNamespace("ggpubr"))
   install.packages("ggpubr", repos = "https://cloud.r-project.org")
 
 require(dplyr)
@@ -27,16 +28,19 @@ require(reshape2)
 require(ggpubr)
 ```
 
-
-```{r}
+```{r load-data}
+# Load ---------------------------------------------------------------------------------------------
+# Data: USA FACTS
+# Date: 03/29/2020
 daily_new_cases <- read_csv("../data/processed/case data/usa-facts/03-29-2020/daily_new_cases_03292020.csv")
 
-pop_full <- read_csv("../data/raw/census data/population/cc-est2018-alldata.csv") 
+# Data: US Census 2018: Population
+pop_full <- read_csv("../data/raw/census data/population/cc-est2018-alldata.csv")
 ```
 
+## Population data
 
-# Population data
-```{r}
+```{r population}
 pop <- pop_dat %>%
   
 # Keep the latest year and the total age group
@@ -120,8 +124,7 @@ top20_cases <- daily_cases %>%
   left_join(pop, by = "county_fips")
 ```
 
-
-# Fit the models
+## Fit the models
 
 ```{r}
 dat_each_county <- list()
@@ -140,7 +143,7 @@ for (i in 1:nrow(top20_county)) {
   
   mod_poly[[i]] <- glm(new_cases ~ poly(day, 2), data = dat_each_county[[i]], family = poisson(link = "log"), offset = ttl_pop)
   dat_each_county[[i]]$yhat_t2 <- predict(mod_poly[[i]], type = "response")
-    
+
 }
 ```
 
@@ -171,7 +174,7 @@ ggsave(filename = "../results/county local predictive plots/plot yhat_t1 on y.pn
 
 ```{r}
 ggplot(dat_each_county[[1]]) +
-  theme_minimal() + 
+  theme_minimal() +
   theme(panel.grid.minor = element_blank()) +
   geom_line(mapping = aes(x = day, y = new_cases), col = 1) +
   geom_line(mapping = aes(x = day, y = yhat_t1), col = 2) +
@@ -203,12 +206,10 @@ pred_plot_all <- ggarrange(pred_plot[[1]], pred_plot[[2]], pred_plot[[3]], pred_
 ggsave(filename = "../results/county local predictive plots/plot y and yhat on day.png", plot = pred_plot_all, width = 18, height = 10)
 ```
 
-
-# LRT
+## LRT
 
 ```{r}
 for (i in 1:nrow(top20_county)) {
   print(anova(mod_linear[[i]], mod_poly[[i]], test = "LRT")$`Pr(>Chi)`[2])
 }
 ```
-

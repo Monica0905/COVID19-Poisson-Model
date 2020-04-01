@@ -43,10 +43,10 @@ This descriptive analysis illustrates how county-level confirmed [COVID-19](http
 
 Through data processing, we created two levels of data files for the analysis: 
 
-- National Level: 
+- National Level:
   - Daily nation-wide total confirmed cases
 
-- County Level: 
+- County Level:
   - Daily new cases by county and state
   - Cumulative cases by county and state
   - Most recent confirmed cases by county (as of 03-29-2020)
@@ -66,9 +66,9 @@ dat <- fread(
 # Unify variable naming using lower_snack_case
 confirmed_cases <- as_tibble(dat) %>%
   rename(
-    county_fips = countyFIPS, 
-    county_name = "County Name", 
-    state_name = State, 
+    county_fips = countyFIPS,
+    county_name = "County Name",
+    state_name = State,
     state_fips = stateFIPS
   ) %>%
   subset(
