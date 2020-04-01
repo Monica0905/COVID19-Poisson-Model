@@ -124,8 +124,6 @@ top20_cases <- daily_cases %>%
 # Fit the models
 
 ```{r}
-par(mfrow = c(2, 5))
-
 dat_each_county <- list()
 ```
 
@@ -144,7 +142,9 @@ for (i in 1:nrow(top20_county)) {
   dat_each_county[[i]]$yhat_t2 <- predict(mod_poly[[i]], type = "response")
     
 }
+```
 
+```{r}
 plot(dat_each_county[[1]]$yhat_t1, dat_each_county[[1]]$new_cases)
 abline(a = 0, b = 1)
 
@@ -153,6 +153,23 @@ abline(a = 0, b = 1)
 
 
 
+compare_y_yhat <- list()
+
+for (i in 1:nrow(top20_county)) {
+  compare_y_yhat[[i]] <- ggplot(dat_each_county[[i]]) +
+     theme_minimal() + 
+     theme(panel.grid.minor = element_blank()) +
+     geom_point(mapping = aes(x = new_cases, y = yhat_t1), col = 1) +
+     geom_abline(intercept = 0, slope = 1, col = 2) +
+     ggtitle(paste("county", 1))
+}
+
+compare_y_yhat_all <- ggarrange(compare_y_yhat[[1]], compare_y_yhat[[2]], compare_y_yhat[[3]], compare_y_yhat[[4]], compare_y_yhat[[5]], compare_y_yhat[[6]], compare_y_yhat[[7]], compare_y_yhat[[8]], compare_y_yhat[[9]], compare_y_yhat[[10]], compare_y_yhat[[11]], compare_y_yhat[[12]], compare_y_yhat[[13]], compare_y_yhat[[14]], compare_y_yhat[[15]], compare_y_yhat[[16]], compare_y_yhat[[17]], compare_y_yhat[[18]], compare_y_yhat[[19]], compare_y_yhat[[20]],
+                              ncol = 5, nrow = 4)
+ggsave(filename = "../results/county local predictive plots/plot yhat_t1 on y.png", plot = compare_y_yhat_all, width = 18, height = 10)
+```
+
+```{r}
 ggplot(dat_each_county[[1]]) +
   theme_minimal() + 
   theme(panel.grid.minor = element_blank()) +
@@ -184,5 +201,14 @@ pred_plot_c9_c12 <- ggarrange(pred_plot[[9]], pred_plot[[10]], pred_plot[[11]], 
 pred_plot_all <- ggarrange(pred_plot[[1]], pred_plot[[2]], pred_plot[[3]], pred_plot[[4]], pred_plot[[5]], pred_plot[[6]], pred_plot[[7]], pred_plot[[8]], pred_plot[[9]], pred_plot[[10]], pred_plot[[11]], pred_plot[[12]], pred_plot[[13]], pred_plot[[14]], pred_plot[[15]], pred_plot[[16]], pred_plot[[17]], pred_plot[[18]], pred_plot[[19]], pred_plot[[20]],
                               ncol = 5, nrow = 4)
 ggsave(filename = "../results/county local predictive plots/plot y and yhat on day.png", plot = pred_plot_all, width = 18, height = 10)
+```
+
+
+# LRT
+
+```{r}
+for (i in 1:nrow(top20_county)) {
+  print(anova(mod_linear[[i]], mod_poly[[i]], test = "LRT")$`Pr(>Chi)`[2])
+}
 ```
 
