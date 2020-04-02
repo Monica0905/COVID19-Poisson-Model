@@ -29,13 +29,15 @@ require(ggpubr)
 ```
 
 ```{r load-data}
+here::here()
 # Load ---------------------------------------------------------------------------------------------
 # Data: USA FACTS
 # Date: 03/29/2020
-daily_new_cases <- read_csv("../data/processed/case data/usa-facts/03-29-2020/daily_new_cases_03292020.csv")
+daily_new_cases <- 
+  read_csv("../data/processed/usa-facts/03-29-2020/daily_new_cases_03292020.csv")
 
 # Data: US Census 2018: Population
-pop_full <- read_csv("../data/raw/census data/population/cc-est2018-alldata.csv")
+pop_dat <- read_csv("../data/raw/census data/population/cc-est2018-alldata.csv")
 ```
 
 ## Population data
@@ -44,11 +46,14 @@ pop_full <- read_csv("../data/raw/census data/population/cc-est2018-alldata.csv"
 pop <- pop_dat %>%
   
 # Keep the latest year and the total age group
+  # YEAR 11 = 7/1/2018 population estimate
+  # AGEGRP 0 = Total
   filter(YEAR == 11 & AGEGRP == 0) %>%
 
 # Add the 5-digit county fips code
   mutate(county_fips = as.numeric(paste0(STATE, COUNTY))) %>%
   
+  # ttl_pop: Total Population
   select(county_fips, ttl_pop = TOT_POP)
 ```
 
@@ -56,7 +61,8 @@ pop <- pop_dat %>%
 
 
 
-```{r}
+```{r current-total-viz}
+# Create histograms to show distribution of current total cases 
 hist(daily_new_cases$current_total, breaks = 200)
 hist(daily_new_cases$current_total[daily_new_cases$current_total<2000], breaks = 200)
 hist(daily_new_cases$current_total[daily_new_cases$current_total<200], breaks = 20)
@@ -132,6 +138,7 @@ dat_each_county <- list()
 
 ```{r}
 mod_linear <- list()
+mod_poly <- list()
 
 for (i in 1:nrow(top20_county)) {
   
@@ -164,7 +171,7 @@ for (i in 1:nrow(top20_county)) {
      theme(panel.grid.minor = element_blank()) +
      geom_point(mapping = aes(x = new_cases, y = yhat_t1), col = 1) +
      geom_abline(intercept = 0, slope = 1, col = 2) +
-     ggtitle(paste("county", 1))
+     ggtitle(paste("county", i))
 }
 
 compare_y_yhat_all <- ggarrange(compare_y_yhat[[1]], compare_y_yhat[[2]], compare_y_yhat[[3]], compare_y_yhat[[4]], compare_y_yhat[[5]], compare_y_yhat[[6]], compare_y_yhat[[7]], compare_y_yhat[[8]], compare_y_yhat[[9]], compare_y_yhat[[10]], compare_y_yhat[[11]], compare_y_yhat[[12]], compare_y_yhat[[13]], compare_y_yhat[[14]], compare_y_yhat[[15]], compare_y_yhat[[16]], compare_y_yhat[[17]], compare_y_yhat[[18]], compare_y_yhat[[19]], compare_y_yhat[[20]],
