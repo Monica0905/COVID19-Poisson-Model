@@ -19,7 +19,7 @@ here::here()
 
 ```{r}
 # Read metropolitan data
-metro <- read_xls("../data/raw/census data/metropolitan/list1_Sep_2018.xls", skip = 2)
+metro_raw <- read_xls("../data/raw/census data/metropolitan/list1_Sep_2018.xls", skip = 2)
 
 # Get the FIPS codes for all the counties from the case data
 county_fips <- read_csv("../data/processed/usa-facts/03-29-2020/daily_new_cases_03292020.csv") %>%
@@ -27,7 +27,7 @@ county_fips <- read_csv("../data/processed/usa-facts/03-29-2020/daily_new_cases_
   filter(county_fips != 0)
 
 # Clean the metro data
-metro <- metro %>%
+metro <- metro_raw %>%
   filter(!is.na(`FIPS State Code`), !is.na(`FIPS County Code`)) %>%
   mutate(county_fips = as.numeric(paste0(`FIPS State Code`, `FIPS County Code`)),
          metro = as.numeric(`Metropolitan/Micropolitan Statistical Area`=="Metropolitan Statistical Area"),
@@ -42,5 +42,16 @@ metro <- left_join(county_fips, metro) %>%
 ```
 
 
-# 
+# Land area 
+
+```{r}
+# LND110210D - Land area in square miles 2010
+
+area_raw <- read_xls("../data/raw/census data/land area/LND01.xls")
+
+area <- area_raw %>%
+  mutate(county_fips = as.numeric(STCOU)) %>%
+  select(county_fips, land_area = LND110210D)
+```
+
 
