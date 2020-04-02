@@ -7,6 +7,7 @@ output: html_document
 
 ```{r setup}
 require(readxl)
+require(readr)
 require(dplyr)
 require(here)
 
@@ -17,17 +18,29 @@ here::here()
 # Metropolitan data
 
 ```{r}
-# Read data
+# Read metropolitan data
 metro <- read_xls("../data/raw/census data/metropolitan/list1_Sep_2018.xls", skip = 2)
 
-# Clean data
+# Get the FIPS codes for all the counties from the case data
+county_fips <- read_csv("../data/processed/usa-facts/03-29-2020/daily_new_cases_03292020.csv") %>%
+  select(county_fips) %>%
+  filter(county_fips != 0)
+
+# Clean the metro data
 metro <- metro %>%
   filter(!is.na(`FIPS State Code`), !is.na(`FIPS County Code`)) %>%
   mutate(county_fips = as.numeric(paste0(`FIPS State Code`, `FIPS County Code`)),
-         metro = `Metropolitan/Micropolitan Statistical Area`=="Metropolitan Statistical Area",
-         micro = `Metropolitan/Micropolitan Statistical Area`=="Micropolitan Statistical Area") %>% 
+         metro = as.numeric(`Metropolitan/Micropolitan Statistical Area`=="Metropolitan Statistical Area"),
+         micro = as.numeric(`Metropolitan/Micropolitan Statistical Area`=="Micropolitan Statistical Area")) %>% 
   select(county_fips, metro, micro)
+
+# Merge with the county FIPS
+# Those counties not in the above metro data are coded as 0 in both the "metro" and "micro" variables
+metro <- left_join(county_fips, metro) %>%
+  mutate(metro = ifelse(is.na(metro), 0, metro),
+         micro = ifelse(is.na(micro), 0, micro))
 ```
 
 
+# 
 
