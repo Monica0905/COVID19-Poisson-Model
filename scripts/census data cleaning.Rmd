@@ -1,0 +1,33 @@
+---
+title: "census data cleaning"
+output: html_document
+---
+
+# Load packages
+
+```{r setup}
+require(readxl)
+require(dplyr)
+require(here)
+
+here::here()
+```
+
+
+# Metropolitan data
+
+```{r}
+# Read data
+metro <- read_xls("../data/raw/census data/metropolitan/list1_Sep_2018.xls", skip = 2)
+
+# Clean data
+metro <- metro %>%
+  filter(!is.na(`FIPS State Code`), !is.na(`FIPS County Code`)) %>%
+  mutate(county_fips = as.numeric(paste0(`FIPS State Code`, `FIPS County Code`)),
+         metro = `Metropolitan/Micropolitan Statistical Area`=="Metropolitan Statistical Area",
+         micro = `Metropolitan/Micropolitan Statistical Area`=="Micropolitan Statistical Area") %>% 
+  select(county_fips, metro, micro)
+```
+
+
+
