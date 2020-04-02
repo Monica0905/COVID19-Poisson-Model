@@ -37,7 +37,7 @@ pop_full <- read_csv("../data/raw/census data/population/cc-est2018-alldata.csv"
 
 # Population data
 ```{r}
-pop <- pop_dat %>%
+pop <- pop_full %>%
   
 # Keep the latest year and the total age group
   filter(YEAR == 11 & AGEGRP == 0) %>%
@@ -210,5 +210,33 @@ ggsave(filename = "../results/county local predictive plots/plot y and yhat on d
 for (i in 1:nrow(top20_county)) {
   print(anova(mod_linear[[i]], mod_poly[[i]], test = "LRT")$`Pr(>Chi)`[2])
 }
+```
+
+
+
+
+
+
+# Try different starting points
+
+```{r}
+# Look at the case distribution in the first 10 days
+par(mfrow = c(2, 5))
+for (i in 1:10) {
+  hist(top20_cases$new_cases[top20_cases$day==i], breaks = 20, main = paste("day", i))
+}
+par(mfrow = c(1, 1))
+```
+
+## Write a function to apply for different starting points
+
+```{r}
+top20_cases <- top20_cases %>%
+  # Add a column to know the first day with more than 3 new cases
+  group_by(county_fips) %>%
+  mutate(cum_cases_nmore = cumsum(new_cases >= 3)) %>%
+  
+  # Keep only those days from the first day with more than 3 new cases
+  filter(cum_cases_nmore > 0)
 ```
 
