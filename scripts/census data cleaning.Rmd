@@ -105,7 +105,7 @@ area <- area_raw %>%
 # Population 2010 
 # Year 1 = 4/1/2010 Census population
 
-pop2010 <- pop %>%
+pop2010 <- pop_raw %>%
   filter(year == 1 & agegrp == 0) %>%
   select(county_fips, tot_pop)
 
@@ -119,5 +119,11 @@ pop_dens <- full_join(area, pop2010, by = "county_fips") %>%
 
 
 
+# Socioeconomic (education, employment, income, poverty)
+
+```{r}
+# Read data
+
+```
 
 
