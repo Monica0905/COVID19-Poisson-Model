@@ -1,6 +1,18 @@
 ---
 title: "census data cleaning"
-output: html_document
+subtitle: "The COVID-19 Possion Model Project"
+output: 
+  html_document:
+    df_print: paged
+    theme: paper
+    highlight: kate
+    toc: true
+    toc_float: 
+      collapsed: false
+      smooth_scroll: false
+    toc_depth: 3
+    number_sections: false
+    code_folding: hide
 ---
 
 # Load packages
@@ -10,15 +22,14 @@ require(readxl)
 require(readr)
 require(dplyr)
 require(reshape2)
-require(here)
 
-here::here()
+# Set up working directory
+# setwd()
 ```
-
 
 # Metropolitan data
 
-```{r}
+```{r metro}
 # Read metropolitan data
 metro_raw <- read_xls("../data/raw/census data/metropolitan/list1_Sep_2018.xls", skip = 2)
 
