@@ -41,27 +41,7 @@ pop_dat <- read_csv("../data/raw/census data/population/cc-est2018-alldata.csv")
 ```
 
 
-
-# Population data
-
-```{r population}
-pop <- pop_dat %>%
-  
-# Keep the latest year and the total age group
-  # YEAR 11 = 7/1/2018 population estimate
-  # AGEGRP 0 = Total
-  filter(YEAR == 11 & AGEGRP == 0) %>%
-
-# Add the 5-digit county fips code
-  mutate(county_fips = as.numeric(paste0(STATE, COUNTY))) %>%
-  
-  # ttl_pop: Total Population
-  select(county_fips, ttl_pop = TOT_POP)
-```
-
-
-
-
+# Create histograms to show distribution of current total cases 
 
 ```{r current-total-viz}
 # Create histograms to show distribution of current total cases 
@@ -82,7 +62,28 @@ hist(county_atleast1case$current_total[county_atleast1case$current_total<200], b
 ```
 
 
+# Data cleaning
 
+## Get the population of each county
+
+```{r population}
+pop <- pop_dat %>%
+  
+# Keep the latest year and the total age group
+  # YEAR 11 = 7/1/2018 population estimate
+  # AGEGRP 0 = Total
+  filter(YEAR == 11 & AGEGRP == 0) %>%
+
+# Add the 5-digit county fips code
+  mutate(county_fips = as.numeric(paste0(STATE, COUNTY))) %>%
+  
+  # ttl_pop: Total Population
+  select(county_fips, ttl_pop = TOT_POP)
+```
+
+
+
+## Clean the case data
 
 ```{r}
 # Reshape the data to the long format
@@ -105,8 +106,12 @@ daily_cases <- daily_new_cases_long %>%
   
 # Add the days from the first confirmed case
   mutate(day = row_number())
+```
 
 
+## Get the top 20 counties with most confirmed cases
+
+```{r}
 # Top 20 counties with most confirmed cases
 top20_county <- daily_cases %>%
   group_by(county_fips) %>%
@@ -116,9 +121,9 @@ top20_county <- daily_cases %>%
   top_n(20)
 
 # Case data for these top 20 counties
-top20_cases <- daily_cases %>%
-  filter(county_fips %in% top20_county$county_fips) %>%
-  select(county_fips, day, new_cases)
+#top20_cases <- daily_cases %>%
+  #filter(county_fips %in% top20_county$county_fips) %>%
+  #select(county_fips, day, new_cases)
 
 # Negative values?
 #top20_cases %>% filter(new_cases < 0)
@@ -132,13 +137,12 @@ top20_cases <- daily_cases %>%
   left_join(pop, by = "county_fips")
 ```
 
-## Fit the models
+
+# Fit the models
 
 ```{r}
 dat_each_county <- list()
-```
 
-```{r}
 mod_linear <- list()
 mod_poly <- list()
 
@@ -156,15 +160,30 @@ for (i in 1:nrow(top20_county)) {
 }
 ```
 
+
+# Visualize the model results
+
+## Plot predicted lambda (linear and polynomial models) and observed y on day
+
 ```{r}
-plot(dat_each_county[[1]]$yhat_t1, dat_each_county[[1]]$new_cases)
-abline(a = 0, b = 1)
+pred_plot <- list()
 
-plot(dat_each_county[[1]]$yhat_t2, dat_each_county[[1]]$new_cases)
-abline(a = 0, b = 1)
+for (i in 1:nrow(top20_county)) {
+  pred_plot[[i]] <- ggplot(dat_each_county[[i]]) +
+    geom_line(mapping = aes(x = day, y = new_cases), col = 1) +
+    geom_line(mapping = aes(x = day, y = yhat_t1), col = 2) +
+    geom_line(mapping = aes(x = day, y = yhat_t2), col = 3) +
+    ggtitle(paste("county", i))
+}
 
+pred_plot_all <- ggarrange(pred_plot[[1]], pred_plot[[2]], pred_plot[[3]], pred_plot[[4]], pred_plot[[5]], pred_plot[[6]], pred_plot[[7]], pred_plot[[8]], pred_plot[[9]], pred_plot[[10]], pred_plot[[11]], pred_plot[[12]], pred_plot[[13]], pred_plot[[14]], pred_plot[[15]], pred_plot[[16]], pred_plot[[17]], pred_plot[[18]], pred_plot[[19]], pred_plot[[20]],
+                              ncol = 5, nrow = 4)
+ggsave(filename = "../results/local model for top 10 counties/plot y and yhat on day.png", plot = pred_plot_all, width = 18, height = 10)
+```
 
+## Plot predicted lambda (linear model) on observed y
 
+```{r}
 compare_y_yhat <- list()
 
 for (i in 1:nrow(top20_county)) {
@@ -178,44 +197,12 @@ for (i in 1:nrow(top20_county)) {
 
 compare_y_yhat_all <- ggarrange(compare_y_yhat[[1]], compare_y_yhat[[2]], compare_y_yhat[[3]], compare_y_yhat[[4]], compare_y_yhat[[5]], compare_y_yhat[[6]], compare_y_yhat[[7]], compare_y_yhat[[8]], compare_y_yhat[[9]], compare_y_yhat[[10]], compare_y_yhat[[11]], compare_y_yhat[[12]], compare_y_yhat[[13]], compare_y_yhat[[14]], compare_y_yhat[[15]], compare_y_yhat[[16]], compare_y_yhat[[17]], compare_y_yhat[[18]], compare_y_yhat[[19]], compare_y_yhat[[20]],
                               ncol = 5, nrow = 4)
-ggsave(filename = "../results/county local predictive plots/plot yhat_t1 on y.png", plot = compare_y_yhat_all, width = 18, height = 10)
+ggsave(filename = "../results/local model for top 10 counties/plot yhat_t1 on y.png", plot = compare_y_yhat_all, width = 18, height = 10)
 ```
 
-```{r}
-ggplot(dat_each_county[[1]]) +
-  theme_minimal() +
-  theme(panel.grid.minor = element_blank()) +
-  geom_line(mapping = aes(x = day, y = new_cases), col = 1) +
-  geom_line(mapping = aes(x = day, y = yhat_t1), col = 2) +
-  geom_line(mapping = aes(x = day, y = yhat_t2), col = 3) +
-  ggtitle(paste("county", 1))
 
 
-pred_plot <- list()
-
-for (i in 1:nrow(top20_county)) {
-  pred_plot[[i]] <- ggplot(dat_each_county[[i]]) +
-    geom_line(mapping = aes(x = day, y = new_cases), col = 1) +
-    geom_line(mapping = aes(x = day, y = yhat_t1), col = 2) +
-    geom_line(mapping = aes(x = day, y = yhat_t2), col = 3) +
-    ggtitle(paste("county", i))
-}
-
-pred_plot_c1_c4 <- ggarrange(pred_plot[[1]], pred_plot[[2]], pred_plot[[3]], pred_plot[[4]],
-                              ncol = 2, nrow = 2)
-
-
-pred_plot_c5_c8 <- ggarrange(pred_plot[[5]], pred_plot[[6]], pred_plot[[7]], pred_plot[[8]], ncol = 2, nrow = 2)
-
-
-pred_plot_c9_c12 <- ggarrange(pred_plot[[9]], pred_plot[[10]], pred_plot[[11]], pred_plot[[12]], ncol = 2, nrow = 2)
-
-pred_plot_all <- ggarrange(pred_plot[[1]], pred_plot[[2]], pred_plot[[3]], pred_plot[[4]], pred_plot[[5]], pred_plot[[6]], pred_plot[[7]], pred_plot[[8]], pred_plot[[9]], pred_plot[[10]], pred_plot[[11]], pred_plot[[12]], pred_plot[[13]], pred_plot[[14]], pred_plot[[15]], pred_plot[[16]], pred_plot[[17]], pred_plot[[18]], pred_plot[[19]], pred_plot[[20]],
-                              ncol = 5, nrow = 4)
-ggsave(filename = "../results/local model for top 10 counties/plot y and yhat on day.png", plot = pred_plot_all, width = 18, height = 10)
-```
-
-## LRT
+# LRT
 
 ```{r}
 for (i in 1:nrow(top20_county)) {
@@ -229,7 +216,14 @@ for (i in 1:nrow(top20_county)) {
 
 
 
-# Try different starting points
+
+
+
+
+
+
+
+# Try different starting points (unfinished...)
 
 ```{r}
 # Look at the case distribution in the first 10 days
