@@ -87,7 +87,7 @@ hist(county_atleast1case$current_total[county_atleast1case$current_total<200], b
 ```{r}
 # Reshape the data to the long format
 daily_new_cases_long <- melt(daily_new_cases, 
-                             id.vars = "county_fips",
+                             id.vars = c("state_fips", "county_fips"),
                              measure.vars = colnames(daily_new_cases)[7:ncol(daily_new_cases)],
                              variable.name = "date",
                              value.name = "new_cases") %>%
@@ -212,7 +212,7 @@ pred_plot_c9_c12 <- ggarrange(pred_plot[[9]], pred_plot[[10]], pred_plot[[11]], 
 
 pred_plot_all <- ggarrange(pred_plot[[1]], pred_plot[[2]], pred_plot[[3]], pred_plot[[4]], pred_plot[[5]], pred_plot[[6]], pred_plot[[7]], pred_plot[[8]], pred_plot[[9]], pred_plot[[10]], pred_plot[[11]], pred_plot[[12]], pred_plot[[13]], pred_plot[[14]], pred_plot[[15]], pred_plot[[16]], pred_plot[[17]], pred_plot[[18]], pred_plot[[19]], pred_plot[[20]],
                               ncol = 5, nrow = 4)
-ggsave(filename = "../results/county local predictive plots/plot y and yhat on day.png", plot = pred_plot_all, width = 18, height = 10)
+ggsave(filename = "../results/local model for top 10 counties/plot y and yhat on day.png", plot = pred_plot_all, width = 18, height = 10)
 ```
 
 ## LRT
