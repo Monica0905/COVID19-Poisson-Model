@@ -1,5 +1,5 @@
 ---
-title: "census data cleaning"
+title: "data-cleaning-us-census"
 subtitle: "The COVID-19 Possion Model Project"
 output: 
   html_document:
@@ -15,16 +15,13 @@ output:
     code_folding: hide
 ---
 
-# Load packages
+# Dependencies
 
 ```{r setup}
 require(readxl)
 require(readr)
 require(dplyr)
 require(reshape2)
-require(here)
-
-here::here()
 ```
 
 # Metropolitan data
