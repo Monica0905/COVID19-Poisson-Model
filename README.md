@@ -10,7 +10,7 @@ For a complete list of data sources, please visit the [Data Source Wiki](https:/
 
 ### Access Data
 
-Data are stored on Google Drive. Please use [**THIS LINK**](https://drive.google.com/drive/folders/1xZDBQJFxCApj7UhAkjtrmrHnOwtgRvye?usp=sharing) to access.
+Raw data are stored on Google Drive. Please use [**THIS LINK**](https://drive.google.com/drive/folders/1xZDBQJFxCApj7UhAkjtrmrHnOwtgRvye?usp=sharing) to access.
 
 For new data files, please upload directly onto the sharing folder. After uploading, please create a **README** file using either [Text File](https://en.wikipedia.org/wiki/Text_file) or [Markdown](https://en.wikipedia.org/wiki/Markdown) formats. In the README document, please add a **simple description** of the data included in the folder, along with some of (or the entire of) the following contents:
 
@@ -29,5 +29,7 @@ Please refer to [the tidyverse style guide](https://style.tidyverse.org/) recomm
 ## Descriptive Analysis
 
 A descriptive analysis of county-level confirmed cases in the United States can be found [HERE](https://github.com/Monica0905/COVID2019-GLM-Model/blob/master/reports/descriptive-analysis-county-level-cases-usa-facts.pdf).
+
+## Results
 
 Results are available [HERE](https://github.com/Monica0905/COVID2019-GLM-Model/tree/master/results).

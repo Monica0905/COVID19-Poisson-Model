@@ -88,7 +88,8 @@ pop <- pop_dat %>%
 ```{r}
 # Reshape the data to the long format
 daily_new_cases_long <- melt(daily_new_cases, 
-                             id.vars = c("state_fips", "county_fips"),
+                             id.vars = c("state_fips", "county_fips",
+                                         "state_name", "county_name"),
                              measure.vars = colnames(daily_new_cases)[7:ncol(daily_new_cases)],
                              variable.name = "date",
                              value.name = "new_cases") %>%
@@ -105,7 +106,14 @@ daily_cases <- daily_new_cases_long %>%
   filter(cum_cases != 0) %>%
   
 # Add the days from the first confirmed case
-  mutate(day = row_number())
+  mutate(day = row_number()) %>%
+  
+# Merge with county population
+  left_join(pop, by = "county_fips") %>%
+  select(state_fips, county_fips, state_name, county_name, date, day, new_cases, ttl_pop)
+
+# Save the data
+save(daily_cases, file = "../data/processed/daily cases in long format.RDATA")
 ```
 
 
@@ -130,11 +138,8 @@ top20_county <- daily_cases %>%
 
 top20_cases <- daily_cases %>%
   filter(county_fips %in% top20_county$county_fips) %>%
-  select(county_fips, day, new_cases) %>%
-  filter(new_cases >= 0) %>%
-  
-  # Merge with population data
-  left_join(pop, by = "county_fips")
+  select(county_fips, day, new_cases, ttl_pop) %>%
+  filter(new_cases >= 0)
 ```
 
 
