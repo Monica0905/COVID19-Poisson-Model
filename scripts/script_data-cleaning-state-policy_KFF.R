@@ -40,6 +40,7 @@ state_name <- str_subset(
   state_policy, 
   pattern = pattern_state_name
 )
+state_name <- str_to_title(state_name)
 n_state_name <- length(state_name)
 
 # Create a vector to store index of state names
@@ -111,6 +112,11 @@ for (i in 1:n_state_name) {
     policy_by_state[[i]],
     pattern = ",", 
     replacement = ""
+  )
+  policy_by_state[[i]] <- str_replace_all(
+    policy_by_state[[i]],
+    pattern = "\\.", 
+    replacement = "/"
   )  
 }
 
@@ -166,6 +172,11 @@ for (i in 1:n_state_name) {
   )
   state_policy_output[[i]] <- 
     state_policy_output[[i]][, 2:ncol(state_policy_output[[i]])]
+  state_policy_output[[i]] <- cbind(
+    state_policy_output[[i]],
+    state_name = rep(state_name[i], nrow(state_policy_output[[i]]))
+  )
+    
 }
 
 # Convert state_policy_output list to a data frame and tidy up -----------------
@@ -173,10 +184,13 @@ state_policy_output_df <- rbindlist(state_policy_output, fill = TRUE)
 state_policy_output_df <- subset(
   state_policy_output_df, 
   select = c(
+    "state_name",
     paste("date", c(1:8), sep = ""),
     "event"
   )
 )
+# Set NA values to blank
+state_policy_output_df[is.na(state_policy_output_df)] <- ""
 
 # Output -----------------------------------------------------------------------
 write.csv(state_policy_output_df, 
