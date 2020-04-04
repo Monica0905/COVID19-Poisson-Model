@@ -1,19 +1,15 @@
 # Data Source
 
-USA Facts
+[USA Facts](https://usafacts.org/visualizations/coronavirus-covid-19-spread-map/)
 
-https://usafacts.org/visualizations/coronavirus-covid-19-spread-map/
+## Key Updates
 
-## Details
+### 03-25-2020 to 03-28-2020
 
-### 03-25-2020
+- Confirmed cases by States and Counties
+- Time series: Jan. 22 - Mar. 25
+- Excludes Diamond Princess
 
-**covid_confirmed_usafacts.csv**
-  - Confirmed cases by States and Counties
-  - Time series: Jan. 22 - Mar. 25
-  - Excludes Diamond Princess
+### 03-29-2020
 
-**covid_deaths_usafacts.csv**
-  - Confirmed deaths by States and Counties
-  - Time series: Jan. 22 - Mar. 25
-  - Excludes Diamond Princess
+- Date format changed from long year style to short year style. For example: 03/29/2020 has been updated to 03/29/20

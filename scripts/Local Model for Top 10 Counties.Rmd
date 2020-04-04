@@ -1,0 +1,249 @@
+---
+title: "Local Model for Top 10 Counties"
+subtitle: "with County Local Predictive Plots"
+author: "NYU A3SR"
+date: "3/31/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+if(!requireNamespace("dplyr"))
+  install.packages("dplyr", repos = "https://cloud.r-project.org")
+if(!requireNamespace("here"))
+  install.packages("here", repos = "https://cloud.r-project.org")
+if(!requireNamespace("ggplot2"))
+  install.packages("ggplot2", repos = "https://cloud.r-project.org")
+if(!requireNamespace("readr"))
+  install.packages("readr", repos = "https://cloud.r-project.org")
+if(!requireNamespace("reshape2"))
+  install.packages("reshape2", repos = "https://cloud.r-project.org")
+if(!requireNamespace("ggpubr"))
+  install.packages("ggpubr", repos = "https://cloud.r-project.org")
+
+require(dplyr)
+require(here)
+require(ggplot2)
+require(readr)
+require(reshape2)
+require(ggpubr)
+```
+
+```{r load-data}
+here::here()
+
+# Data: USA FACTS
+# Date: 03/29/2020
+daily_new_cases <- 
+  read_csv("../data/processed/usa-facts/03-29-2020/daily_new_cases_03292020.csv")
+
+# Data: US Census 2018: Population
+pop_dat <- read_csv("../data/raw/census data/population/cc-est2018-alldata.csv")
+```
+
+
+# Create histograms to show distribution of current total cases 
+
+```{r current-total-viz}
+# Create histograms to show distribution of current total cases 
+hist(daily_new_cases$current_total, breaks = 200)
+hist(daily_new_cases$current_total[daily_new_cases$current_total<2000], breaks = 200)
+hist(daily_new_cases$current_total[daily_new_cases$current_total<200], breaks = 20)
+hist(daily_new_cases$current_total[daily_new_cases$current_total<100], breaks = 40)
+
+sum(daily_new_cases$current_total>200)
+
+
+
+county_atleast1case <- daily_new_cases %>%
+  filter(current_total > 0)
+hist(county_atleast1case$current_total[county_atleast1case$current_total<2000], breaks = 40)
+hist(county_atleast1case$current_total[county_atleast1case$current_total<500], breaks = 40)
+hist(county_atleast1case$current_total[county_atleast1case$current_total<200], breaks = 40)
+```
+
+
+# Data cleaning
+
+## Get the population of each county
+
+```{r population}
+pop <- pop_dat %>%
+  
+# Keep the latest year and the total age group
+  # YEAR 11 = 7/1/2018 population estimate
+  # AGEGRP 0 = Total
+  filter(YEAR == 11 & AGEGRP == 0) %>%
+
+# Add the 5-digit county fips code
+  mutate(county_fips = as.numeric(paste0(STATE, COUNTY))) %>%
+  
+  # ttl_pop: Total Population
+  select(county_fips, ttl_pop = TOT_POP)
+```
+
+
+
+## Clean the case data
+
+```{r}
+# Reshape the data to the long format
+daily_new_cases_long <- melt(daily_new_cases, 
+                             id.vars = c("state_fips", "county_fips"),
+                             measure.vars = colnames(daily_new_cases)[7:ncol(daily_new_cases)],
+                             variable.name = "date",
+                             value.name = "new_cases") %>%
+  arrange(county_fips, date) %>%
+  filter(county_fips != 0)
+
+# Get the first day with cases confirmed
+# (the first non-zero value within each county)
+daily_cases <- daily_new_cases_long %>%
+  
+  group_by(county_fips) %>%
+  
+  mutate(cum_cases = cumsum(new_cases)) %>%
+  filter(cum_cases != 0) %>%
+  
+# Add the days from the first confirmed case
+  mutate(day = row_number())
+```
+
+
+## Get the top 20 counties with most confirmed cases
+
+```{r}
+# Top 20 counties with most confirmed cases
+top20_county <- daily_cases %>%
+  group_by(county_fips) %>%
+  summarise(ttl_cases = sum(new_cases)) %>%
+  ungroup() %>%
+  arrange(desc(ttl_cases)) %>%
+  top_n(20)
+
+# Case data for these top 20 counties
+#top20_cases <- daily_cases %>%
+  #filter(county_fips %in% top20_county$county_fips) %>%
+  #select(county_fips, day, new_cases)
+
+# Negative values?
+#top20_cases %>% filter(new_cases < 0)
+
+top20_cases <- daily_cases %>%
+  filter(county_fips %in% top20_county$county_fips) %>%
+  select(county_fips, day, new_cases) %>%
+  filter(new_cases >= 0) %>%
+  
+  # Merge with population data
+  left_join(pop, by = "county_fips")
+```
+
+
+# Fit the models
+
+```{r}
+dat_each_county <- list()
+
+mod_linear <- list()
+mod_poly <- list()
+
+for (i in 1:nrow(top20_county)) {
+  
+  dat_each_county[[i]] <- top20_cases %>%
+    filter(county_fips == top20_county$county_fips[i])
+  
+  mod_linear[[i]] <- glm(new_cases ~ day, data = dat_each_county[[i]], family = poisson(link = "log"), offset = ttl_pop)
+  dat_each_county[[i]]$yhat_t1 <- predict(mod_linear[[i]], type = "response")
+  
+  mod_poly[[i]] <- glm(new_cases ~ poly(day, 2), data = dat_each_county[[i]], family = poisson(link = "log"), offset = ttl_pop)
+  dat_each_county[[i]]$yhat_t2 <- predict(mod_poly[[i]], type = "response")
+
+}
+```
+
+
+# Visualize the model results
+
+## Plot predicted lambda (linear and polynomial models) and observed y on day
+
+```{r}
+pred_plot <- list()
+
+for (i in 1:nrow(top20_county)) {
+  pred_plot[[i]] <- ggplot(dat_each_county[[i]]) +
+    geom_line(mapping = aes(x = day, y = new_cases), col = 1) +
+    geom_line(mapping = aes(x = day, y = yhat_t1), col = 2) +
+    geom_line(mapping = aes(x = day, y = yhat_t2), col = 3) +
+    ggtitle(paste("county", i))
+}
+
+pred_plot_all <- ggarrange(pred_plot[[1]], pred_plot[[2]], pred_plot[[3]], pred_plot[[4]], pred_plot[[5]], pred_plot[[6]], pred_plot[[7]], pred_plot[[8]], pred_plot[[9]], pred_plot[[10]], pred_plot[[11]], pred_plot[[12]], pred_plot[[13]], pred_plot[[14]], pred_plot[[15]], pred_plot[[16]], pred_plot[[17]], pred_plot[[18]], pred_plot[[19]], pred_plot[[20]],
+                              ncol = 5, nrow = 4)
+ggsave(filename = "../results/local model for top 10 counties/plot y and yhat on day.png", plot = pred_plot_all, width = 18, height = 10)
+```
+
+## Plot predicted lambda (linear model) on observed y
+
+```{r}
+compare_y_yhat <- list()
+
+for (i in 1:nrow(top20_county)) {
+  compare_y_yhat[[i]] <- ggplot(dat_each_county[[i]]) +
+     theme_minimal() + 
+     theme(panel.grid.minor = element_blank()) +
+     geom_point(mapping = aes(x = new_cases, y = yhat_t1), col = 1) +
+     geom_abline(intercept = 0, slope = 1, col = 2) +
+     ggtitle(paste("county", i))
+}
+
+compare_y_yhat_all <- ggarrange(compare_y_yhat[[1]], compare_y_yhat[[2]], compare_y_yhat[[3]], compare_y_yhat[[4]], compare_y_yhat[[5]], compare_y_yhat[[6]], compare_y_yhat[[7]], compare_y_yhat[[8]], compare_y_yhat[[9]], compare_y_yhat[[10]], compare_y_yhat[[11]], compare_y_yhat[[12]], compare_y_yhat[[13]], compare_y_yhat[[14]], compare_y_yhat[[15]], compare_y_yhat[[16]], compare_y_yhat[[17]], compare_y_yhat[[18]], compare_y_yhat[[19]], compare_y_yhat[[20]],
+                              ncol = 5, nrow = 4)
+ggsave(filename = "../results/local model for top 10 counties/plot yhat_t1 on y.png", plot = compare_y_yhat_all, width = 18, height = 10)
+```
+
+
+
+# LRT
+
+```{r}
+for (i in 1:nrow(top20_county)) {
+  print(anova(mod_linear[[i]], mod_poly[[i]], test = "LRT")$`Pr(>Chi)`[2])
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Try different starting points (unfinished...)
+
+```{r}
+# Look at the case distribution in the first 10 days
+par(mfrow = c(2, 5))
+for (i in 1:10) {
+  hist(top20_cases$new_cases[top20_cases$day==i], breaks = 20, main = paste("day", i))
+}
+par(mfrow = c(1, 1))
+```
+
+## Write a function to apply for different starting points
+
+```{r}
+top20_cases <- top20_cases %>%
+  # Add a column to know the first day with more than 3 new cases
+  group_by(county_fips) %>%
+  mutate(cum_cases_nmore = cumsum(new_cases >= 3)) %>%
+  
+  # Keep only those days from the first day with more than 3 new cases
+  filter(cum_cases_nmore > 0)
+```
+
+

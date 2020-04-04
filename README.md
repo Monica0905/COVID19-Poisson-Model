@@ -1,4 +1,4 @@
-# COVID-19 Poisson Model
+# COVID-19 Poisson Model Project
 
 This project is to study the factors of the spread of n-COVID 2019 virus in the US. We are modeling the incident rate of n-COVID cases with daily county level data.
 
@@ -25,3 +25,9 @@ For new data files, please upload directly onto the sharing folder. After upload
 ### Coding Style
 
 Please refer to [the tidyverse style guide](https://style.tidyverse.org/) recommended by [Hadley Wickham](http://hadley.nz/).
+
+## Descriptive Analysis
+
+A descriptive analysis of county-level confirmed cases in the United States can be found [HERE](https://github.com/Monica0905/COVID2019-GLM-Model/blob/master/reports/descriptive-analysis-county-level-cases-usa-facts.pdf).
+
+Results are available [HERE](https://github.com/Monica0905/COVID2019-GLM-Model/tree/master/results).
