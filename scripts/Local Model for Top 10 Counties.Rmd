@@ -88,7 +88,8 @@ pop <- pop_dat %>%
 ```{r}
 # Reshape the data to the long format
 daily_new_cases_long <- melt(daily_new_cases, 
-                             id.vars = c("state_fips", "county_fips"),
+                             id.vars = c("state_fips", "county_fips",
+                                         "state_name", "county_name"),
                              measure.vars = colnames(daily_new_cases)[7:ncol(daily_new_cases)],
                              variable.name = "date",
                              value.name = "new_cases") %>%
@@ -109,7 +110,7 @@ daily_cases <- daily_new_cases_long %>%
   
 # Merge with county population
   left_join(pop, by = "county_fips") %>%
-  select(state_fips, county_fips, date, day, new_cases, ttl_pop)
+  select(state_fips, county_fips, state_name, county_name, date, day, new_cases, ttl_pop)
 
 # Save the data
 save(daily_cases, file = "../data/processed/daily cases in long format.RDATA")
