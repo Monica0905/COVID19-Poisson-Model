@@ -22,13 +22,11 @@ library(data.table)
 
 # Load -------------------------------------------------------------------------
 state_policy <- read_html(
-  "../data/processed/state-policy-KFF.html",
+  "../data/processed/state_policy_KFF.html",
   skip = 6,    # Skip top six info lines
   trim = TRUE, # Remove leading white spaces
   remove.empty = TRUE # Remove empty elements
 )
-
-# writeLines(state_policy)
 
 # Extract state name strings ---------------------------------------------------
 # State names are all in FULL UPPERCASE format
