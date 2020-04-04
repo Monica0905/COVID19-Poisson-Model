@@ -22,9 +22,9 @@ require(readxl)
 require(readr)
 require(dplyr)
 require(reshape2)
+require(here)
 
-# Set up working directory
-# setwd()
+here::here()
 ```
 
 # Metropolitan data
@@ -43,14 +43,21 @@ metro <- metro_raw %>%
   filter(!is.na(`FIPS State Code`), !is.na(`FIPS County Code`)) %>%
   mutate(county_fips = as.numeric(paste0(`FIPS State Code`, `FIPS County Code`)),
          metro = as.numeric(`Metropolitan/Micropolitan Statistical Area`=="Metropolitan Statistical Area"),
-         micro = as.numeric(`Metropolitan/Micropolitan Statistical Area`=="Micropolitan Statistical Area")) %>% 
-  select(county_fips, metro, micro)
+         micro = as.numeric(`Metropolitan/Micropolitan Statistical Area`=="Micropolitan Statistical Area"),
+         central = as.numeric(`Central/Outlying County`=="Central"),
+         outlying = as.numeric(`Central/Outlying County`=="Outlying")) %>%
+  select(county_fips, metro, micro, central, outlying)
 
 # Merge with the county FIPS
-# Those counties not in the above metro data are coded as 0 in both the "metro" and "micro" variables
+# Those counties not in the above metro data are coded as 0 in the "metro", "micro", "central", and "outlying" variables
 metro <- left_join(county_fips, metro) %>%
   mutate(metro = ifelse(is.na(metro), 0, metro),
-         micro = ifelse(is.na(micro), 0, micro))
+         micro = ifelse(is.na(micro), 0, micro),
+         central = ifelse(is.na(central), 0, central),
+         outlying = ifelse(is.na(outlying), 0, outlying))
+
+# Save data
+write.csv(metro, file = "../data/processed/census data/metropolitan.csv", row.names = F)
 ```
 
 
@@ -116,7 +123,7 @@ area <- area_raw %>%
 # Population 2010 
 # Year 1 = 4/1/2010 Census population
 
-pop2010 <- pop %>%
+pop2010 <- pop_raw %>%
   filter(year == 1 & agegrp == 0) %>%
   select(county_fips, tot_pop)
 
@@ -126,9 +133,69 @@ pop2010 <- pop %>%
 pop_dens <- full_join(area, pop2010, by = "county_fips") %>%
   mutate(pop_dens = tot_pop / land_area) %>%
   select(county_fips, pop_dens)
+
+# Add the density data to the population dataset
+pop <- full_join(pop, pop_dens, by = "county_fips") %>%
+  select(county_fips, tot_pop, pop_dens, pop_elder:pop_age_85)
+
+# Save the data
+write.csv(pop, file = "../data/processed/census data/population.csv", row.names = F)
 ```
 
 
 
+# Socioeconomic (education, employment, income, poverty)
+
+```{r}
+# Education
+
+educ_raw <- read_xls("../data/raw/census data/education & economic/Education.xls", skip = 4)
+
+educ <- educ_raw %>%
+  mutate(county_fips = as.numeric(`FIPS Code`)) %>%
+  select(county_fips, 
+         pop_hs_less = `Less than a high school diploma, 2014-18`,
+         pop_hs = `High school diploma only, 2014-18`,
+         pop_college = `Some college or associate's degree, 2014-18`,
+         pop_bs_more = `Bachelor's degree or higher, 2014-18`,
+         pct_pop_hs_less = `Percent of adults with less than a high school diploma, 2014-18`,
+         pct_pop_hs = `Percent of adults with a high school diploma only, 2014-18`,
+         pct_pop_college = `Percent of adults completing some college or associate's degree, 2014-18`,
+         pct_pop_bs_more = `Percent of adults with a bachelor's degree or higher, 2014-18`)
+
+
+# Poverty and income
+
+poverty_raw <- read_xls("../data/raw/census data/education & economic/PovertyEstimates.xls", skip = 4)
+
+poverty <- poverty_raw %>%
+  mutate(county_fips = as.numeric(FIPStxt)) %>%
+  select(county_fips,
+         pop_poverty = POVALL_2018,
+         pct_pop_poverty = PCTPOVALL_2018,
+         med_house_inc = MEDHHINC_2018)
+
+
+# Employment
+
+employ_raw <- read_xls("../data/raw/census data/education & economic/Unemployment.xls", skip = 4)
+
+employ <- employ_raw %>%
+  mutate(county_fips = as.numeric(FIPS)) %>%
+  select(county_fips,
+         unemploy_rate = Unemployment_rate_2018,
+         pop_labor_force =  Civilian_labor_force_2018,
+         pop_employed = Employed_2018,
+         pop_unemployed = Unemployed_2018)
+         
+         
+# Merge the three socioeconomic datasets together 
+ses <- full_join(educ, poverty, by = "county_fips") %>%
+  full_join(employ, by = "county_fips")
+
+
+#Save the data
+write.csv(ses, file = "../data/processed/census data/socioeconomics.csv", row.names = F)
+```
 
 
