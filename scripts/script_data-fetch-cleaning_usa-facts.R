@@ -1,26 +1,26 @@
 # COVID-19 Poisson Model Project
 # NYU A3SR
-# Created On: 04/03/2020
+# Created On:  04/03/2020
+# Modified On: 04/06/2020 ------------------------------------------------------
 
 # Auto Data Download and Cleaning
 # Data Source: USA FACTS
 # Website URL: https://usafacts.org/visualizations/coronavirus-covid-19-spread-map/
 
-# ------------------------------------------------------------------------------
-# Description: 
+# Description ------------------------------------------------------------------
+# 
 # Automatically downloads data files from USA FACTS and generates a cleaned data 
 # file in long format. 
 # 
-# Note:
+# Notes ------------------------------------------------------------------------
 # 1. This script is heavily commented to clarify the logic flow. Comments in 
 # English and Chinese are both welcome.
 # 2. The margin of this script is set to 80.
 # 3. After updating the code, please leave a comment with name and date next to 
 # changes. 
 # e.g.: # Tong_04032020
-# ------------------------------------------------------------------------------
 
-# Dependencies 
+# Dependencies -----------------------------------------------------------------
 if(!requireNamespace("dplyr"))
   install.packages("dplyr", repos = "https://cloud.r-project.org")
 if(!requireNamespace("data.table"))
@@ -37,7 +37,7 @@ require(RCurl)
 require(stringr)
 require(reshape2)
 
-# Data Source Link
+# Data Source Link -------------------------------------------------------------
 src_confirmed_cases <-
   "https://usafactsstatic.blob.core.windows.net/public/data/covid-19/covid_confirmed_usafacts.csv"
 src_confirmed_deaths <- 
@@ -45,7 +45,9 @@ src_confirmed_deaths <-
 src_county_pop_2019_census <- 
   "https://usafactsstatic.blob.core.windows.net/public/data/covid-19/covid_county_population_usafacts.csv"
 
-# Load -------------------------------------------------------------------------
+# Load Data --------------------------------------------------------------------
+# If data source links are active, load data
+# If not, stop
 if (
   url.exists(src_confirmed_cases) &
   url.exists(src_confirmed_deaths) & 
@@ -58,11 +60,12 @@ if (
   stop("Check data source links")
 }
 
-# Last column index
+# Create variables to store index of last column (number of columns)
 ncol_confirmed_cases <- ncol(confirmed_cases)
 ncol_deaths <- ncol(deaths)
 
-# Update variable naming format using lower_snack_case style -------------------
+# Update Naming Format ---------------------------------------------------------
+# Use lower_snack_case style
 if (TRUE) {
   # The pipe symbol (%>%) means AND
   confirmed_cases <- as_tibble(confirmed_cases) %>% 
@@ -108,7 +111,8 @@ if (TRUE) {
     )
 }
 
-# Set data parameter -----------------------------------------------------------
+# Set Data Parameter -----------------------------------------------------------
+# Check if tables have same supplementary data columns
 if (FALSE) { # Switch to TRUE to check uniformity
   table(
     confirmed_cases[, 1:4] == deaths[, 1:4]
@@ -134,6 +138,7 @@ if (FALSE) { # Switch to TRUE to check uniformity
 diff_rows <- which(
   confirmed_cases$county_name != deaths$county_name
 )
+
 if (diff_rows != 0) {
   # Set county names in `deaths` to title format
   deaths$county_name[diff_rows] <- str_to_title(
@@ -152,7 +157,7 @@ if (diff_rows != 0) {
 #           Broomfield County in Colorado has different name inputs
 #           Matthews County in Virginia has different name inputs
   
-  # Locate Dona Ana County in New Mexico using str_match
+  # Locate Dona Ana County in New Mexico using str_match()
   locate_dona_ana_county <- 
     which(
       str_match(
@@ -258,7 +263,7 @@ confirmed_cases_county_pop <- confirmed_cases %>%
     everything()
   )
 
-# Calculate state population using county_pop data file ------------------------
+# Calculate State Population using county_pop Data File ------------------------
 fips_state <- data.frame(
   state_name = sort(unique(confirmed_cases$state_name)),
   state_fips = sort(unique(confirmed_cases$state_fips))
@@ -280,7 +285,7 @@ state_pop <- state_pop %>%
     state_pop_in_thou
   )
 
-# Change from cumulative to daily new cases ------------------------------------
+# Change from Cumulative to Daily New Cases ------------------------------------
 # IN confirmed_cases data table
 primary_data <- confirmed_cases_county_pop[, -(1:6)]
 supplementary_data <- confirmed_cases_county_pop[, 1:6]
@@ -307,7 +312,7 @@ daily_new_cases <- cbind(
   county_daily_new_temp
 )
 
-# Reshape the long format ------------------------------------------------------
+# Reshape to Long Format ------------------------------------------------------
 # Get the first day with cases confirmed (the first non-zero value within each 
 # county).
 ncol_daily_new_cases <- ncol(daily_new_cases)
@@ -338,10 +343,11 @@ daily_new_cases_long <- reshape2::melt(
     cum_cases != 0
   ) %>%
   mutate(
-    day = row_number()
-  )
+    day = row_number(),
+    new_day = day - 1 # Tong, 04062020
+  ) 
 
-# Save to data folder ----------------------------------------------------------
+# Save to Data Folder ----------------------------------------------------------
 write.csv(
   daily_new_cases, 
   file = "../data/processed/daily_new_cases_usa_facts.csv"
@@ -353,4 +359,13 @@ write.csv(
 write.csv(
   state_pop,
   file = "../data/processed/state_population_usa_facts.csv"
+)
+
+# Get update results -----------------------------------------------------------
+print(
+  paste(
+    "The data files have been updated to: ",
+    colnames(daily_new_cases)[ncol_daily_new_cases],
+    sep = ""
+  )
 )
