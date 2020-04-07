@@ -53,6 +53,7 @@ if (
   url.exists(src_confirmed_deaths) & 
   url.exists(src_county_pop_2019_census)
 ) {
+  print("Downloading data...")
   confirmed_cases <- fread(src_confirmed_cases)
   deaths <- fread(src_confirmed_deaths)
   county_pop <- fread(src_county_pop_2019_census)
@@ -301,6 +302,7 @@ primary_one_last_day <- cbind(
   "initial" = 0, 
   primary_data[, -ncol_primary]
 )
+print("This will take a while, please do not hit the stop button.")
 for (i in 1:N) {
   county_daily_new_temp[i, ] <- primary_data[i, ] - primary_one_last_day[i, ]
 }
@@ -369,3 +371,4 @@ print(
     sep = ""
   )
 )
+
