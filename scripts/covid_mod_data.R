@@ -7,7 +7,8 @@ library(base)
 covid.mod.data.usa<-function(data, method="day", atleast_cases=NULL, days_passed=5, 
                              which_day_start=NULL, days_to_predict=3,
                              predict_from_whichday=max(as.Date("3/26/20", format="%m/%d/%y")),
-                             today=max(as.Date(data$date, format="%m/%d/%y")), norm.day=TRUE) {
+                             today=max(as.Date(data$date, format="%m/%d/%y")), norm.day=TRUE,
+                             data.summary=TRUE) {
   
   
   
