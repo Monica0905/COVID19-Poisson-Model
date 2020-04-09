@@ -113,6 +113,9 @@ if (TRUE) {
 }
 
 # Set Data Parameter -----------------------------------------------------------
+# 04082020[temportary]: Remove duplicates --------------------------------------------------
+deaths <- deaths[1:(nrow(deaths)-1), ]
+
 # Check if tables have same supplementary data columns
 if (FALSE) { # Switch to TRUE to check uniformity
   table(
@@ -140,7 +143,7 @@ diff_rows <- which(
   confirmed_cases$county_name != deaths$county_name
 )
 
-if (diff_rows != 0) {
+if (diff_rows[1] != 0) {
   # Set county names in `deaths` to title format
   deaths$county_name[diff_rows] <- str_to_title(
     deaths$county_name[diff_rows]
@@ -154,7 +157,7 @@ if (diff_rows != 0) {
   # Get those rows
   county_name_diff_rows <- confirmed_cases$county_name[diff_rows]
 
-# 04032020: Dona Ana County in New Mexico has unreadable inputs
+# 04032020: Dona Ana County in New Mexico has unreadable inputs ----------------
 #           Broomfield County in Colorado has different name inputs
 #           Matthews County in Virginia has different name inputs
   
@@ -202,19 +205,37 @@ if (diff_rows != 0) {
 # Exclude statewide un-allocated cases (county_fips == 0,    county_pop == 0)
 # Exclude Wade Hampton Census Area     (county_fips == 2270, county_pop == 0)
 # Exclude Grand Princess Cruise Ship   (county_fips == 6000, county_pop == 0)
-fips_excludable_county <- c(0, 2270, 6000)
+name_excludable_county <- c(
+  "Statewide Unallocated",
+  "Wade Hampton Census Area",
+  "Grand Princess Cruise Ship"
+)
 confirmed_cases <- confirmed_cases %>%
   filter(
-    !county_fips %in% fips_excludable_county
+    !county_name %in% name_excludable_county
   )
 deaths <- deaths %>%
   filter(
-    !county_fips %in% fips_excludable_county
+    !county_name %in% name_excludable_county
   )
 county_pop <- county_pop %>%
   filter(
-    !county_pop %in% fips_excludable_county
+    !county_name %in% name_excludable_county
   )
+
+
+
+# 04082020: Update county_name in county_pop -----------------------------------
+# Locate rows with different county names
+diff_rows_county_pop <- which(
+  confirmed_cases$county_name != county_pop$county_name
+)
+# Rename Dona Ana County in row 252
+county_pop$county_name[252] <- 
+  "Broomfield County"
+# Rename Broomfield County in row 1803
+county_pop$county_name[1803] <-
+  "Dona Ana County"
 
 # Merge New York City un-allocated to New York County
 # IN confirmed_cases
@@ -247,8 +268,10 @@ deaths[locate_NY_county, -(1:4)] <-
 # Delete NYC un-allocated row
 deaths <- deaths[-locate_NYC_unallocated, ]
 
-# NYC un-allocated in county_pop has already been excluded because county_fips 
-# equals to 0 in county_pop data file
+# IN county_pop
+locate_NYC_unallocated_in_county_pop <- 
+  which(county_pop$county_name == "New York City Unallocated")
+county_pop <- county_pop[-locate_NYC_unallocated_in_county_pop, ]
 
 # Join Data --------------------------------------------------------------------
 # Use confirmed_cases as main data table
