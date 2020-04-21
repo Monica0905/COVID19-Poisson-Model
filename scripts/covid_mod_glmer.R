@@ -3,12 +3,14 @@ library(lme4)
 library(dplyr)
 library(base)
 
-source("covid_mod_data.R")
+source("covid_mod_data2.R")
 
 data0<-read.csv("../data/processed/daily_new_cases_long_usa_facts.csv")
+today <- max(as.Date(data0$date, format="%m/%d/%y"))
+predict_from_whichday<-as.Date("4/1/20", format="%m/%d/%y")
 data.processed<-covid.mod.data.usa(data0, method="cases", atleast_cum_cases=5, 
-                             predict_from_whichday=as.Date("4/1/20", format="%m/%d/%y"),
-                             today=max(as.Date(data$date, format="%m/%d/%y")),
+                             predict_from_whichday=predict_from_whichday,
+                             today=today,
                             days_to_predict=today-predict_from_whichday+3, norm.day=TRUE)
 
 data <- data.processed$data
