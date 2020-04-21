@@ -53,7 +53,7 @@ covid.mod.data.usa<-function(data, method="day", atleast_cum_cases=5, days_passe
   if (method=="day") { # not tested
       atleast_cum_cases <- 0
       county.summary <-  covid.data.summary.county(data, atleast_cum_cases=atleast_cum_cases)
-      county.summary$county.keep <- county.summary$total.date1>=5+days_passed
+      county.summary$county.keep <- county.summary$total.days.atleast>=5+days_passed
       data <- data[data$county_fips %in% county.summary$county_fips[county.summary$county.keep==1],]
       data <- data[data$day>=days_passed,]     
       
