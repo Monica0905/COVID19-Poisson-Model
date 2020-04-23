@@ -113,11 +113,9 @@ if (TRUE) {
 }
 
 # Set Data Parameter -----------------------------------------------------------
-# 04082020[temportary]: Remove duplicates --------------------------------------------------
-deaths <- deaths[1:(nrow(deaths)-1), ]
-
+# 04232020: Temporary drop deaths data -----------------------------------------
 # Check if tables have same supplementary data columns
-if (FALSE) { # Switch to TRUE to check uniformity
+if (FALSE) { # NOT RUN 04232020
   table(
     confirmed_cases[, 1:4] == deaths[, 1:4]
   ) # Not uniformed
@@ -137,31 +135,79 @@ if (FALSE) { # Switch to TRUE to check uniformity
   )
   print(confirmed_cases$county_name[diff_rows])
   print(county_pop$county_name[diff_rows])
-}
 
-diff_rows <- which(
-  confirmed_cases$county_name != deaths$county_name
-)
-
-if (diff_rows[1] != 0) {
-  # Set county names in `deaths` to title format
-  deaths$county_name[diff_rows] <- str_to_title(
-    deaths$county_name[diff_rows]
-  )
-  # Locate rows with different county names
   diff_rows <- which(
     confirmed_cases$county_name != deaths$county_name
   )
-  # Get those county fips
-  fips_diff_rows <- confirmed_cases$county_fips[diff_rows]
-  # Get those rows
-  county_name_diff_rows <- confirmed_cases$county_name[diff_rows]
-
-# 04032020: Dona Ana County in New Mexico has unreadable inputs ----------------
-#           Broomfield County in Colorado has different name inputs
-#           Matthews County in Virginia has different name inputs
   
-  # Locate Dona Ana County in New Mexico using str_match()
+  if (diff_rows[1] != 0) {
+    # Set county names in `deaths` to title format
+    deaths$county_name[diff_rows] <- str_to_title(
+      deaths$county_name[diff_rows]
+    )
+    # Locate rows with different county names
+    diff_rows <- which(
+      confirmed_cases$county_name != deaths$county_name
+    )
+    # Get those county fips
+    fips_diff_rows <- confirmed_cases$county_fips[diff_rows]
+    # Get those rows
+    county_name_diff_rows <- confirmed_cases$county_name[diff_rows]
+  
+  # 04032020: Dona Ana County in New Mexico has unreadable inputs ----------------
+  #           Broomfield County in Colorado has different name inputs
+  #           Matthews County in Virginia has different name inputs
+    
+    # Locate Dona Ana County in New Mexico using str_match()
+    locate_dona_ana_county <- 
+      which(
+        str_match(
+          county_name_diff_rows, 
+          pattern = "Ana County$"
+        ) == "Ana County"
+      )
+    # Rename Dona Ana County in New Mexico
+    confirmed_cases$county_name[
+      diff_rows[locate_dona_ana_county]
+      ] <- "Dona Ana County"
+    deaths$county_name[
+      diff_rows[locate_dona_ana_county]
+      ] <- "Dona Ana County"
+    # Locate Broomfield County in Colorado using str_match
+    locate_broomfield_county <- 
+      which(
+        str_match(
+          county_name_diff_rows, 
+          pattern = "^Broomfield"
+        ) == "Broomfield"
+      )
+    # Rename Broomfield County in Colorado
+    confirmed_cases$county_name[
+      diff_rows[locate_broomfield_county]
+    ] <- "Broomfield County"
+    # Locate Matthews County in Virginia using str_match
+    locate_matthews_county <- 
+      which(
+        str_match(
+          county_name_diff_rows, 
+          pattern = "^Mat"
+        ) == "Mat"
+      )
+    # Rename Matthews County in Virginia
+    deaths$county_name[
+      diff_rows[locate_matthews_county]
+    ] <- "Matthews County"
+  }
+}
+
+if (TRUE) { # 04232020: Temporary drop deaths data
+  # Check rows with different county names
+  diff_rows <- which(
+    confirmed_cases$county_name != county_pop$county_name
+  )
+  # Find those county fips
+  fips_diff_rows <- confirmed_cases$county_fips[diff_rows]
+  # Get row of Dona Ana County in New Mexico
   locate_dona_ana_county <- 
     which(
       str_match(
@@ -172,10 +218,10 @@ if (diff_rows[1] != 0) {
   # Rename Dona Ana County in New Mexico
   confirmed_cases$county_name[
     diff_rows[locate_dona_ana_county]
-    ] <- "Dona Ana County"
-  deaths$county_name[
+  ] <- "Dona Ana County"
+  county_pop$county_name[
     diff_rows[locate_dona_ana_county]
-    ] <- "Dona Ana County"
+  ] <- "Dona Ana County"
   # Locate Broomfield County in Colorado using str_match
   locate_broomfield_county <- 
     which(
@@ -188,18 +234,9 @@ if (diff_rows[1] != 0) {
   confirmed_cases$county_name[
     diff_rows[locate_broomfield_county]
   ] <- "Broomfield County"
-  # Locate Matthews County in Virginia using str_match
-  locate_matthews_county <- 
-    which(
-      str_match(
-        county_name_diff_rows, 
-        pattern = "^Mat"
-      ) == "Mat"
-    )
-  # Rename Matthews County in Virginia
-  deaths$county_name[
-    diff_rows[locate_matthews_county]
-  ] <- "Matthews County"
+  county_pop$county_name[
+    diff_rows[locate_broomfield_county]
+  ] <- "Broomfield County"
 }
 
 # Exclude statewide un-allocated cases (county_fips == 0,    county_pop == 0)
@@ -214,64 +251,14 @@ confirmed_cases <- confirmed_cases %>%
   filter(
     !county_name %in% name_excludable_county
   )
-deaths <- deaths %>%
-  filter(
-    !county_name %in% name_excludable_county
-  )
+# deaths <- deaths %>%
+#   filter(
+#     !county_name %in% name_excludable_county
+#   )
 county_pop <- county_pop %>%
   filter(
     !county_name %in% name_excludable_county
   )
-
-
-
-# 04082020: Update county_name in county_pop -----------------------------------
-# Locate rows with different county names
-diff_rows_county_pop <- which(
-  confirmed_cases$county_name != county_pop$county_name
-)
-# Rename Dona Ana County in row 252
-county_pop$county_name[252] <- 
-  "Broomfield County"
-# Rename Broomfield County in row 1803
-county_pop$county_name[1803] <-
-  "Dona Ana County"
-
-# Merge New York City un-allocated to New York County
-# IN confirmed_cases
-locate_NYC_unallocated <- 
-  which(
-    confirmed_cases$county_name == "New York City Unallocated"
-  )
-locate_NY_county <- 
-  which(
-    confirmed_cases$county_name == "New York County"
-  )
-confirmed_cases[locate_NY_county, -(1:4)] <- 
-  confirmed_cases[locate_NY_county, -(1:4)] + 
-  confirmed_cases[locate_NYC_unallocated, -(1:4)]
-# Delete NYC un-allocated row
-confirmed_cases <- confirmed_cases[-locate_NYC_unallocated, ]
-
-# IN deaths
-locate_NYC_unallocated <- 
-  which(
-    deaths$county_name == "New York City Unallocated"
-  )
-locate_NY_county <- 
-  which(
-    deaths$county_name == "New York County"
-  )
-deaths[locate_NY_county, -(1:4)] <- 
-  deaths[locate_NY_county, -(1:4)] + 
-  deaths[locate_NYC_unallocated, -(1:4)]
-# Delete NYC un-allocated row
-deaths <- deaths[-locate_NYC_unallocated, ]
-
-# IN county_pop
-locate_NYC_unallocated_in_county_pop <- 
-  which(county_pop$county_name == "New York City Unallocated")
-county_pop <- county_pop[-locate_NYC_unallocated_in_county_pop, ]
 
 # Join Data --------------------------------------------------------------------
 # Use confirmed_cases as main data table
