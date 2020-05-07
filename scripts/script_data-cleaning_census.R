@@ -1,4 +1,24 @@
----
+# COVID-19 Poisson Model Project
+# NYU A3SR
+# Created On:  04/03/2020
+# Modified On: 04/06/2020 ------------------------------------------------------
+
+# Auto Data Download and Cleaning
+# Data Source: USA FACTS
+# Website URL: https://usafacts.org/visualizations/coronavirus-covid-19-spread-map/
+
+# Description ------------------------------------------------------------------
+# 
+# Automatically downloads data files from USA FACTS and generates a cleaned data 
+# file in long format. 
+# 
+# Notes ------------------------------------------------------------------------
+# 1. This script is heavily commented to clarify the logic flow. Comments in 
+# English and Chinese are both welcome.
+# 2. The margin of this script is set to 80.
+# 3. After updating the code, please leave a comment with name and date next to 
+# changes. 
+# e.g.: # Tong_04032020
 title: "data-cleaning-us-census"
 subtitle: "The COVID-19 Possion Model Project"
 output: 
