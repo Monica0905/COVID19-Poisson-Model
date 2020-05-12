@@ -1,7 +1,7 @@
 # COVID-19 Poisson Model Project
 # NYU A3SR
 # Created On:  04/03/2020
-# Modified On: 04/06/2020 ------------------------------------------------------
+# Modified On: 05/11/2020 ------------------------------------------------------
 
 # Auto Data Download and Cleaning
 # Data Source: USA FACTS
@@ -13,12 +13,8 @@
 # file in long format. 
 # 
 # Notes ------------------------------------------------------------------------
-# 1. This script is heavily commented to clarify the logic flow. Comments in 
-# English and Chinese are both welcome.
-# 2. The margin of this script is set to 80.
-# 3. After updating the code, please leave a comment with name and date next to 
-# changes. 
-# e.g.: # Tong_04032020
+# Comments in English and Chinese are both welcome.
+# The margin of this script is set to 80.
 
 # Dependencies -----------------------------------------------------------------
 if(!requireNamespace("dplyr"))
@@ -37,7 +33,8 @@ require(RCurl)
 require(stringr)
 require(reshape2)
 
-# Data Source Link -------------------------------------------------------------
+# Load Data --------------------------------------------------------------------
+# Data Source Link 
 src_confirmed_cases <-
   "https://usafactsstatic.blob.core.windows.net/public/data/covid-19/covid_confirmed_usafacts.csv"
 src_confirmed_deaths <- 
@@ -45,7 +42,6 @@ src_confirmed_deaths <-
 src_county_pop_2019_census <- 
   "https://usafactsstatic.blob.core.windows.net/public/data/covid-19/covid_county_population_usafacts.csv"
 
-# Load Data --------------------------------------------------------------------
 # If data source links are active, load data
 # If not, stop
 if (
@@ -61,20 +57,27 @@ if (
   stop("Check data source links")
 }
 
-# Create variables to store index of last column (number of columns)
+# Create variables to store index of the last column (number of columns)
 ncol_confirmed_cases <- ncol(confirmed_cases)
 ncol_deaths <- ncol(deaths)
 
 # Update Naming Format ---------------------------------------------------------
 # Use lower_snack_case style
-if (TRUE) {
-  # The pipe symbol (%>%) means AND
+
+# Check if the first four column names are the same (valid)
+column_name_valid <- ifelse(
+  unique(colnames(confirmed_cases)[1:4] == colnames(deaths)[1:4]) == TRUE,
+  yes = TRUE,
+  no = FALSE
+)
+# If valid, continue; otherwise, stop
+if (column_name_valid == TRUE) {
   confirmed_cases <- as_tibble(confirmed_cases) %>% 
     rename(
-      county_fips = countyFIPS,
-      county_name = "County Name",
-      state_name = State,
-      state_fips = stateFIPS
+      county_fips = colnames(confirmed_cases)[1],
+      county_name = colnames(confirmed_cases)[2],
+      state_name  = colnames(confirmed_cases)[3],
+      state_fips  = colnames(confirmed_cases)[4]
     ) %>%
     # Reorder variables
     subset( 
@@ -87,10 +90,10 @@ if (TRUE) {
     )
   deaths <- as_tibble(deaths) %>%
     rename(
-      county_fips = countyFIPS,
-      county_name = "County Name",
-      state_name = State,
-      state_fips = stateFIPS
+      county_fips = colnames(deaths)[1],
+      county_name = colnames(deaths)[2],
+      state_name  = colnames(deaths)[3],
+      state_fips  = colnames(deaths)[4]
     ) %>%
     subset(
       select = c(1, # county_fips
@@ -102,159 +105,72 @@ if (TRUE) {
     )
   county_pop <- as_tibble(county_pop) %>%
     rename(
-      county_fips = countyFIPS,
-      county_name = "County Name", 
-      state_name = State,
-      county_pop = population
+      county_fips = colnames(county_pop)[1],
+      county_name = colnames(county_pop)[2], 
+      state_name  = colnames(county_pop)[3],
+      county_pop  = colnames(county_pop)[4]
     ) %>%
     mutate(
       county_pop_in_thou = county_pop * .001 # County population in thousands
     )
+  print("Column names validated and updated.")
+} else {
+  stop("Column names do not match! (check line 66)")
 }
 
 # Set Data Parameter -----------------------------------------------------------
-# 04232020: Temporary drop deaths data -----------------------------------------
-# Check if tables have same supplementary data columns
-if (FALSE) { # NOT RUN 04232020
-  table(
-    confirmed_cases[, 1:4] == deaths[, 1:4]
-  ) # Not uniformed
-  # County names contain both upper and lower cases
-  # Set confirmed_cases as standard, left join other data tables
-  diff_rows <- which(
-    confirmed_cases$county_name != deaths$county_name
-  )
-  print(confirmed_cases$county_name[diff_rows])
-  print(deaths$county_name[diff_rows])
-  
-  table(
-    confirmed_cases[, 1] == county_pop[, 1]
-  ) # Not uniformed
-  diff_rows <- which(
-    confirmed_cases$county_fips != county_pop$county_fips
-  )
-  print(confirmed_cases$county_name[diff_rows])
-  print(county_pop$county_name[diff_rows])
+# Update: 05112020
+# Check if tables have same county fips codes and names
+all_fips_valid <- all(
+  unique(confirmed_cases[, 1:2] == deaths[, 1:2])
+) == TRUE
+county_name_valid <- all(
+  unique(confirmed_cases[, 3:4] == deaths[, 3:4])
+) == TRUE
 
-  diff_rows <- which(
-    confirmed_cases$county_name != deaths$county_name
-  )
-  
-  if (diff_rows[1] != 0) {
-    # Set county names in `deaths` to title format
-    deaths$county_name[diff_rows] <- str_to_title(
-      deaths$county_name[diff_rows]
-    )
-    # Locate rows with different county names
+if (all_fips_valid == TRUE) {
+  print("All fips values validated.")
+  if (county_name_valid == TRUE) {
+    print("County names validated.")
+  } else {
+    print("County names do not match. Auto-matching started...")
+    # Determine which county row has different names
     diff_rows <- which(
       confirmed_cases$county_name != deaths$county_name
     )
-    # Get those county fips
-    fips_diff_rows <- confirmed_cases$county_fips[diff_rows]
-    # Get those rows
-    county_name_diff_rows <- confirmed_cases$county_name[diff_rows]
-  
-  # 04032020: Dona Ana County in New Mexico has unreadable inputs ----------------
-  #           Broomfield County in Colorado has different name inputs
-  #           Matthews County in Virginia has different name inputs
-    
-    # Locate Dona Ana County in New Mexico using str_match()
-    locate_dona_ana_county <- 
-      which(
-        str_match(
-          county_name_diff_rows, 
-          pattern = "Ana County$"
-        ) == "Ana County"
-      )
-    # Rename Dona Ana County in New Mexico
-    confirmed_cases$county_name[
-      diff_rows[locate_dona_ana_county]
-      ] <- "Dona Ana County"
-    deaths$county_name[
-      diff_rows[locate_dona_ana_county]
-      ] <- "Dona Ana County"
-    # Locate Broomfield County in Colorado using str_match
-    locate_broomfield_county <- 
-      which(
-        str_match(
-          county_name_diff_rows, 
-          pattern = "^Broomfield"
-        ) == "Broomfield"
-      )
-    # Rename Broomfield County in Colorado
-    confirmed_cases$county_name[
-      diff_rows[locate_broomfield_county]
-    ] <- "Broomfield County"
-    # Locate Matthews County in Virginia using str_match
-    locate_matthews_county <- 
-      which(
-        str_match(
-          county_name_diff_rows, 
-          pattern = "^Mat"
-        ) == "Mat"
-      )
-    # Rename Matthews County in Virginia
-    deaths$county_name[
-      diff_rows[locate_matthews_county]
-    ] <- "Matthews County"
+    # Assign different county names in confirmed_cases to deaths
+    deaths$county_name[diff_rows] <- confirmed_cases$county_name[diff_rows]
+    print("Complete! County names matched.")
   }
-}
-
-if (TRUE) { # 04232020: Temporary drop deaths data
-  # Check rows with different county names
-  diff_rows <- which(
-    confirmed_cases$county_name != county_pop$county_name
+} else {
+  diff_county_fips <- which(
+    confirmed_cases$county_fips != deaths$county_fips
   )
-  # Find those county fips
-  fips_diff_rows <- confirmed_cases$county_fips[diff_rows]
-  # Get row of Dona Ana County in New Mexico
-  locate_dona_ana_county <- 
-    which(
-      str_match(
-        county_name_diff_rows, 
-        pattern = "Ana County$"
-      ) == "Ana County"
-    )
-  # Rename Dona Ana County in New Mexico
-  confirmed_cases$county_name[
-    diff_rows[locate_dona_ana_county]
-  ] <- "Dona Ana County"
-  county_pop$county_name[
-    diff_rows[locate_dona_ana_county]
-  ] <- "Dona Ana County"
-  # Locate Broomfield County in Colorado using str_match
-  locate_broomfield_county <- 
-    which(
-      str_match(
-        county_name_diff_rows, 
-        pattern = "^Broomfield"
-      ) == "Broomfield"
-    )
-  # Rename Broomfield County in Colorado
-  confirmed_cases$county_name[
-    diff_rows[locate_broomfield_county]
-  ] <- "Broomfield County"
-  county_pop$county_name[
-    diff_rows[locate_broomfield_county]
-  ] <- "Broomfield County"
+  diff_state_fips <- which(
+    confirmed_cases$state_fips != deaths$state_fips
+  )
+  stop("Check fips difference!")
 }
 
-# Exclude statewide un-allocated cases (county_fips == 0,    county_pop == 0)
-# Exclude Wade Hampton Census Area     (county_fips == 2270, county_pop == 0)
-# Exclude Grand Princess Cruise Ship   (county_fips == 6000, county_pop == 0)
+# Exclude non-county cases -----------------------------------------------------
+# Determine which row does not contain "County, city, City, Area, Borough, or
+# Parish".
+non_county_rows <- which(
+  str_detect(confirmed_cases$county_name, pattern ="(County|city|City|Area|Borough|Parish)") == FALSE
+)
+print(confirmed_cases$county_name[non_county_rows])
 name_excludable_county <- c(
   "Statewide Unallocated",
-  "Wade Hampton Census Area",
   "Grand Princess Cruise Ship"
 )
 confirmed_cases <- confirmed_cases %>%
   filter(
     !county_name %in% name_excludable_county
   )
-# deaths <- deaths %>%
-#   filter(
-#     !county_name %in% name_excludable_county
-#   )
+deaths <- deaths %>%
+  filter(
+    !county_name %in% name_excludable_county
+  )
 county_pop <- county_pop %>%
   filter(
     !county_name %in% name_excludable_county
@@ -288,13 +204,13 @@ state_pop <- county_pop %>%
     state_pop_in_thou = state_pop * .001, 
   )
 state_pop <- state_pop %>%
-  left_join(fips_state) %>%
-  select(
+left_join(fips_state) %>%
+select(
     state_fips,
     state_name,
     state_pop,
     state_pop_in_thou
-  )
+)
 
 # Change from Cumulative to Daily New Cases ------------------------------------
 # IN confirmed_cases data table
@@ -356,7 +272,7 @@ daily_new_cases_long <- reshape2::melt(
   ) %>%
   mutate(
     day = row_number(),
-    new_day = day - 1 # Tong, 04062020
+    new_day = day - 1 # Create a new_day column that counts from day 0
   ) 
 
 # Save to Data Folder ----------------------------------------------------------
